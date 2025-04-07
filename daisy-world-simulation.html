@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daisy World Simulation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        canvas {
+            background-color: #333;
+            margin: 10px auto;
+            display: block;
+            border-radius: 5px;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        button {
+            padding: 8px 15px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .chart-container {
+            height: 150px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Daisy World Simulation</h1>
+        <p>This simulation demonstrates how black and white daisies can regulate planetary temperature through albedo feedback.</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Solar Luminosity: <span id="luminosityValue">1.0</span></label>
+                <input type="range" id="luminosity" min="0.5" max="1.5" step="0.01" value="1.0">
+                
+                <label>White Daisy Growth Rate: <span id="whiteDaisyRateValue">1.0</span></label>
+                <input type="range" id="whiteDaisyRate" min="0.5" max="1.5" step="0.05" value="1.0">
+                
+                <label>Black Daisy Growth Rate: <span id="blackDaisyRateValue">1.0</span></label>
+                <input type="range" id="blackDaisyRate" min="0.5" max="1.5" step="0.05" value="1.0">
+            </div>
+            
+            <div class="control-group">
+                <label>Death Rate: <span id="deathRateValue">0.3</span></label>
+                <input type="range" id="deathRate" min="0.1" max="0.5" step="0.01" value="0.3">
+                
+                <label>Diffusion Rate: <span id="diffusionRateValue">0.5</span></label>
+                <input type="range" id="diffusionRate" min="0.1" max="0.9" step="0.05" value="0.5">
+                
+                <label>Simulation Speed: <span id="speedValue">1</span>x</label>
+                <input type="range" id="speed" min="1" max="10" step="1" value="1">
+            </div>
+        </div>
+        
+        <div>
+            <button id="startBtn">Start</button>
+            <button id="pauseBtn">Pause</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+        
+        <canvas id="daisyWorldCanvas" width="600" height="400"></canvas>
+        
+        <div class="stats">
+            <div>White Daisies: <span id="whiteDaisyCount">0</span> (<span id="whiteDaisyPercent">0</span>%)</div>
+            <div>Black Daisies: <span id="blackDaisyCount">0</span> (<span id="blackDaisyPercent">0</span>%)</div>
+            <div>Bare Ground: <span id="bareGroundPercent">100</span>%</div>
+            <div>Avg. Temperature: <span id="avgTemp">0</span>°C</div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="historyChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('daisyWorldCanvas');
+        const ctx = canvas.getContext('2d');
+        const chartCanvas = document.getElementById('historyChart');
+        const chartCtx = chartCanvas.getContext('2d');
+        
+        // Simulation parameters
+        let config = {
+            width: 60,
+            height: 40,
+            cellSize: 10,
+            solarLuminosity: 1.0,
+            whiteDaisyGrowthRate: 1.0,
+            blackDaisyGrowthRate: 1.0,
+            deathRate: 0.3,
+            diffusionRate: 0.5,
+            optimalTemp: 22.5, // Optimal temperature for daisy growth
+            whiteDaisyAlbedo: 0.75, // High albedo (reflects heat)
+            blackDaisyAlbedo: 0.25, // Low albedo (absorbs heat)
+            bareGroundAlbedo: 0.5, // Medium albedo
+            baseTemp: 15, // Base temperature with no daisies
+            running: false,
+            speed: 1
+        };
+        
+        // Cell types
+        const BARE = 0;
+        const WHITE_DAISY = 1;
+        const BLACK_DAISY = 2;
+        
+        // Initialize grid
+        let grid = [];
+        let tempGrid = [];
+        let history = {
+            whiteDaisy: [],
+            blackDaisy: [],
+            temperature: []
+        };
+        let stepCount = 0;
+        
+        function initializeGrid() {
+            grid = [];
+            tempGrid = [];
+            
+            for (let y = 0; y < config.height; y++) {
+                grid[y] = [];
+                tempGrid[y] = [];
+                for (let x = 0; x < config.width; x++) {
+                    // Random initial state with 10% chance of daisies
+                    const rand = Math.random();
+                    if (rand < 0.05) {
+                        grid[y][x] = WHITE_DAISY;
+                    } else if (rand < 0.1) {
+                        grid[y][x] = BLACK_DAISY;
+                    } else {
+                        grid[y][x] = BARE;
+                    }
+                    tempGrid[y][x] = config.baseTemp;
+                }
+            }
+            
+            // Reset history
+            history = {
+                whiteDaisy: [],
+                blackDaisy: [],
+                temperature: []
+            };
+            stepCount = 0;
+            
+            updateStats();
+            drawGrid();
+            drawChart();
+        }
+        
+        function calculateLocalTemperature(x, y) {
+            // Local temperature based on cell type and solar luminosity
+            let albedo;
+            if (grid[y][x] === WHITE_DAISY) {
+                albedo = config.whiteDaisyAlbedo;
+            } else if (grid[y][x] === BLACK_DAISY) {
+                albedo = config.blackDaisyAlbedo;
+            } else {
+                albedo = config.bareGroundAlbedo;
+            }
+            
+            // Stefan-Boltzmann law simplified:
+            return config.baseTemp + (config.solarLuminosity * (1 - albedo) * 20);
+        }
+        
+        function diffuseTemperature() {
+            // Create a copy of the temperature grid
+            let newTempGrid = [];
+            for (let y = 0; y < config.height; y++) {
+                newTempGrid[y] = [...tempGrid[y]];
+            }
+            
+            // Apply diffusion
+            for (let y = 0; y < config.height; y++) {
+                for (let x = 0; x < config.width; x++) {
+                    // Get neighbors (Moore neighborhood)
+                    let neighbors = [];
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            if (dx === 0 && dy === 0) continue;
+                            
+                            const nx = (x + dx + config.width) % config.width; // Wrap around
+                            const ny = (y + dy + config.height) % config.height;
+                            
+                            neighbors.push(tempGrid[ny][nx]);
+                        }
+                    }
+                    
+                    // Average neighbor temperature
+                    const avgNeighborTemp = neighbors.reduce((sum, temp) => sum + temp, 0) / neighbors.length;
+                    
+                    // Diffuse temperature
+                    newTempGrid[y][x] = tempGrid[y][x] * (1 - config.diffusionRate) + avgNeighborTemp * config.diffusionRate;
+                }
+            }
+            
+            // Update temperature grid
+            tempGrid = newTempGrid;
+        }
+        
+        function updateDaisies() {
+            // Create a copy of the grid
+            let newGrid = [];
+            for (let y = 0; y < config.height; y++) {
+                newGrid[y] = [...grid[y]];
+            }
+            
+            // Update each cell
+            for (let y = 0; y < config.height; y++) {
+                for (let x = 0; x < config.width; x++) {
+                    // Death probability
+                    if (grid[y][x] !== BARE && Math.random() < config.deathRate) {
+                        newGrid[y][x] = BARE;
+                        continue;
+                    }
+                    
+                    // Growth probability
+                    if (grid[y][x] === BARE) {
+                        // Get empty cell neighbors
+                        const neighbors = [];
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                if (dx === 0 && dy === 0) continue;
+                                
+                                const nx = (x + dx + config.width) % config.width;
+                                const ny = (y + dy + config.height) % config.height;
+                                
+                                if (grid[ny][nx] !== BARE) {
+                                    neighbors.push(grid[ny][nx]);
+                                }
+                            }
+                        }
+                        
+                        // If no neighbors, continue
+                        if (neighbors.length === 0) continue;
+                        
+                        // Choose a random neighbor to potentially grow
+                        const neighborType = neighbors[Math.floor(Math.random() * neighbors.length)];
+                        
+                        // Calculate growth probability based on temperature
+                        // Growth rate is highest at optimal temperature and decreases as temperature deviates
+                        const temp = tempGrid[y][x];
+                        const tempDiff = Math.abs(temp - config.optimalTemp);
+                        let growthProbability = 1.0 - (tempDiff / 40) ** 2; // Parabolic decrease
+                        
+                        // Adjust by daisy type growth rate
+                        if (neighborType === WHITE_DAISY) {
+                            growthProbability *= config.whiteDaisyGrowthRate;
+                        } else {
+                            growthProbability *= config.blackDaisyGrowthRate;
+                        }
+                        
+                        // Apply growth
+                        if (Math.random() < growthProbability) {
+                            newGrid[y][x] = neighborType;
+                        }
+                    }
+                }
+            }
+            
+            // Update grid
+            grid = newGrid;
+        }
+        
+        function simulationStep() {
+            // Calculate temperature based on current state
+            for (let y = 0; y < config.height; y++) {
+                for (let x = 0; x < config.width; x++) {
+                    tempGrid[y][x] = calculateLocalTemperature(x, y);
+                }
+            }
+            
+            // Diffuse temperature
+            diffuseTemperature();
+            
+            // Update daisies
+            updateDaisies();
+            
+            // Update step count
+            stepCount++;
+            
+            // Update statistics and draw
+            updateStats();
+            drawGrid();
+            drawChart();
+        }
+        
+        function updateStats() {
+            let whiteDaisyCount = 0;
+            let blackDaisyCount = 0;
+            let totalTemp = 0;
+            
+            for (let y = 0; y < config.height; y++) {
+                for (let x = 0; x < config.width; x++) {
+                    if (grid[y][x] === WHITE_DAISY) {
+                        whiteDaisyCount++;
+                    } else if (grid[y][x] === BLACK_DAISY) {
+                        blackDaisyCount++;
+                    }
+                    totalTemp += tempGrid[y][x];
+                }
+            }
+            
+            const totalCells = config.width * config.height;
+            const whiteDaisyPercent = (whiteDaisyCount / totalCells * 100).toFixed(1);
+            const blackDaisyPercent = (blackDaisyCount / totalCells * 100).toFixed(1);
+            const bareGroundPercent = (100 - parseFloat(whiteDaisyPercent) - parseFloat(blackDaisyPercent)).toFixed(1);
+            const avgTemp = (totalTemp / totalCells).toFixed(1);
+            
+            document.getElementById('whiteDaisyCount').textContent = whiteDaisyCount;
+            document.getElementById('whiteDaisyPercent').textContent = whiteDaisyPercent;
+            document.getElementById('blackDaisyCount').textContent = blackDaisyCount;
+            document.getElementById('blackDaisyPercent').textContent = blackDaisyPercent;
+            document.getElementById('bareGroundPercent').textContent = bareGroundPercent;
+            document.getElementById('avgTemp').textContent = avgTemp;
+            
+            // Update history (store every 5 steps to keep chart readable)
+            if (stepCount % 5 === 0) {
+                history.whiteDaisy.push(parseFloat(whiteDaisyPercent));
+                history.blackDaisy.push(parseFloat(blackDaisyPercent));
+                history.temperature.push(parseFloat(avgTemp));
+                
+                // Keep history size manageable
+                if (history.whiteDaisy.length > 50) {
+                    history.whiteDaisy.shift();
+                    history.blackDaisy.shift();
+                    history.temperature.shift();
+                }
+            }
+        }
+        
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let y = 0; y < config.height; y++) {
+                for (let x = 0; x < config.width; x++) {
+                    const cellX = x * config.cellSize;
+                    const cellY = y * config.cellSize;
+                    
+                    // Draw cell based on type
+                    if (grid[y][x] === WHITE_DAISY) {
+                        ctx.fillStyle = 'white';
+                    } else if (grid[y][x] === BLACK_DAISY) {
+                        ctx.fillStyle = 'black';
+                    } else {
+                        // Bare ground color based on temperature
+                        const temp = tempGrid[y][x];
+                        const r = Math.min(255, Math.max(0, Math.round((temp - 5) * 10)));
+                        const g = Math.min(255, Math.max(0, Math.round(255 - Math.abs(temp - 22) * 10)));
+                        const b = Math.min(255, Math.max(0, Math.round((35 - temp) * 10)));
+                        ctx.fillStyle = `rgb(${r},${g},${b})`;
+                    }
+                    
+                    ctx.fillRect(cellX, cellY, config.cellSize - 1, config.cellSize - 1);
+                }
+            }
+        }
+        
+        function drawChart() {
+            // Check if history is empty to prevent errors
+            if (history.temperature.length === 0) {
+                return; // Skip drawing if no data
+            }
+            
+            const chartWidth = chartCanvas.width;
+            const chartHeight = chartCanvas.height;
+            
+            // Clear chart
+            chartCtx.clearRect(0, 0, chartWidth, chartHeight);
+            
+            // Draw background
+            chartCtx.fillStyle = '#f5f5f5';
+            chartCtx.fillRect(0, 0, chartWidth, chartHeight);
+            
+            // Draw grid lines
+            chartCtx.strokeStyle = '#ddd';
+            chartCtx.lineWidth = 1;
+            
+            // Horizontal grid lines
+            for (let i = 0; i <= 5; i++) {
+                const y = i * (chartHeight / 5);
+                chartCtx.beginPath();
+                chartCtx.moveTo(0, y);
+                chartCtx.lineTo(chartWidth, y);
+                chartCtx.stroke();
+            }
+            
+            // Vertical grid lines
+            const numPoints = history.temperature.length;
+            if (numPoints > 1) {
+                const stepWidth = chartWidth / (numPoints - 1);
+                for (let i = 0; i < numPoints; i++) {
+                    const x = i * stepWidth;
+                    chartCtx.beginPath();
+                    chartCtx.moveTo(x, 0);
+                    chartCtx.lineTo(x, chartHeight);
+                    chartCtx.stroke();
+                }
+            }
+            
+            // Find min/max for temperature scale
+            const maxTemp = Math.max(...history.temperature, 40);
+            const minTemp = Math.min(...history.temperature, 0);
+            const tempRange = maxTemp - minTemp || 1; // Ensure non-zero range
+            
+            // Draw lines
+            const drawLine = (data, color, yScale) => {
+                if (data.length < 2) return; // Need at least 2 points to draw a line
+                
+                chartCtx.strokeStyle = color;
+                chartCtx.lineWidth = 2;
+                chartCtx.beginPath();
+                
+                for (let i = 0; i < data.length; i++) {
+                    const x = (i / (data.length - 1)) * chartWidth;
+                    const y = chartHeight - (data[i] * yScale);
+                    
+                    if (i === 0) {
+                        chartCtx.moveTo(x, y);
+                    } else {
+                        chartCtx.lineTo(x, y);
+                    }
+                }
+                
+                chartCtx.stroke();
+            };
+            
+            // Draw white daisy line
+            drawLine(history.whiteDaisy, 'rgba(0, 128, 255, 0.8)', chartHeight / 100);
+            
+            // Draw black daisy line
+            drawLine(history.blackDaisy, 'rgba(128, 0, 128, 0.8)', chartHeight / 100);
+            
+            // Draw temperature line with safety checks
+            if (history.temperature.length > 0) {
+                const tempData = history.temperature.map(t => {
+                    // Ensure we don't divide by zero
+                    if (tempRange === 0) return 0.5; // Middle of chart if no range
+                    return (t - minTemp) / tempRange;
+                });
+                drawLine(tempData, 'rgba(255, 80, 0, 0.8)', chartHeight);
+            }
+            
+            // Draw legend
+            chartCtx.font = '10px Arial';
+            chartCtx.fillStyle = 'rgba(0, 128, 255, 0.8)';
+            chartCtx.fillText('White Daisies', 10, 12);
+            
+            chartCtx.fillStyle = 'rgba(128, 0, 128, 0.8)';
+            chartCtx.fillText('Black Daisies', 80, 12);
+            
+            chartCtx.fillStyle = 'rgba(255, 80, 0, 0.8)';
+            chartCtx.fillText(`Temperature (${minTemp.toFixed(1)}-${maxTemp.toFixed(1)}°C)`, 150, 12);
+        }
+        
+        // Initialize canvas sizes
+        function resizeCanvas() {
+            canvas.width = Math.min(600, document.querySelector('.container').clientWidth - 40);
+            config.cellSize = canvas.width / config.width;
+            canvas.height = config.height * config.cellSize;
+            
+            chartCanvas.width = canvas.width;
+            chartCanvas.height = 150;
+            
+            drawGrid();
+            drawChart();
+        }
+        
+        // Event handlers
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if (!config.running) {
+                config.running = true;
+                runSimulation();
+            }
+        });
+        
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            config.running = false;
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            config.running = false;
+            initializeGrid();
+        });
+        
+        // Slider event handlers
+        document.getElementById('luminosity').addEventListener('input', (e) => {
+            config.solarLuminosity = parseFloat(e.target.value);
+            document.getElementById('luminosityValue').textContent = config.solarLuminosity.toFixed(2);
+        });
+        
+        document.getElementById('whiteDaisyRate').addEventListener('input', (e) => {
+            config.whiteDaisyGrowthRate = parseFloat(e.target.value);
+            document.getElementById('whiteDaisyRateValue').textContent = config.whiteDaisyGrowthRate.toFixed(2);
+        });
+        
+        document.getElementById('blackDaisyRate').addEventListener('input', (e) => {
+            config.blackDaisyGrowthRate = parseFloat(e.target.value);
+            document.getElementById('blackDaisyRateValue').textContent = config.blackDaisyGrowthRate.toFixed(2);
+        });
+        
+        document.getElementById('deathRate').addEventListener('input', (e) => {
+            config.deathRate = parseFloat(e.target.value);
+            document.getElementById('deathRateValue').textContent = config.deathRate.toFixed(2);
+        });
+        
+        document.getElementById('diffusionRate').addEventListener('input', (e) => {
+            config.diffusionRate = parseFloat(e.target.value);
+            document.getElementById('diffusionRateValue').textContent = config.diffusionRate.toFixed(2);
+        });
+        
+        document.getElementById('speed').addEventListener('input', (e) => {
+            config.speed = parseInt(e.target.value);
+            document.getElementById('speedValue').textContent = config.speed;
+        });
+        
+        // Run simulation
+        function runSimulation() {
+            if (!config.running) return;
+            
+            // Run multiple steps based on speed
+            for (let i = 0; i < config.speed; i++) {
+                simulationStep();
+            }
+            
+            requestAnimationFrame(runSimulation);
+        }
+        
+        // Initialize
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        initializeGrid();
+    </script>
+</body>
+</html>
