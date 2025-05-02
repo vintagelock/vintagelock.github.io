@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walking Distance Calculator for Weight Loss</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --primary: #bb86fc;
+            --secondary: #03dac6;
+            --error: #cf6679;
+            --text: #e1e1e1;
+            --text-secondary: #b0b0b0;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            line-height: l.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+        
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text);
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background-color: #333;
+            color: var(--text);
+            font-size: 16px;
+        }
+        
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23e1e1e1%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 12px;
+            padding-right: 30px;
+        }
+        
+        button {
+            background-color: var(--primary);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            display: block;
+            width: 100%;
+            margin-top: 15px;
+        }
+        
+        button:hover {
+            background-color: #d0a8ff;
+            transform: translateY(-2px);
+        }
+        
+        .results {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        
+        .results h2 {
+            color: var(--secondary);
+            margin-bottom: 15px;
+        }
+        
+        .result-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .result-label {
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: var(--text-secondary);
+        }
+        
+        .result-value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .info-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            margin-top: 30px;
+        }
+        
+        .info-card h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        
+        .info-card p {
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+        }
+        
+        .tooltip {
+            display: inline-block;
+            position: relative;
+            margin-left: 6px;
+            cursor: help;
+        }
+        
+        .tooltip-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: var(--text-secondary);
+            color: var(--card-bg);
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: #333;
+            color: var(--text);
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 14px;
+            font-weight: normal;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .goal-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+        
+        .goal-heading {
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: var(--secondary);
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .card, .results, .info-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Walking Distance Calculator for Weight Loss</h1>
+        
+        <div class="card">
+            <div class="form-group">
+                <label for="gender">Gender</label>
+                <select id="gender">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="age">Age (years)</label>
+                <input type="number" id="age" min="15" max="100" placeholder="Enter your age">
+            </div>
+            
+            <div class="form-group">
+                <label for="height-unit">Height Unit</label>
+                <select id="height-unit" onchange="toggleHeightFields()">
+                    <option value="cm">Centimeters</option>
+                    <option value="ft-in">Feet & Inches</option>
+                </select>
+            </div>
+            
+            <div id="height-cm-group" class="form-group">
+                <label for="height-cm">Height (cm)</label>
+                <input type="number" id="height-cm" min="100" max="250" placeholder="Enter your height in cm">
+            </div>
+            
+            <div id="height-ft-in-group" class="form-group" style="display: none;">
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label for="height-ft">Feet</label>
+                        <input type="number" id="height-ft" min="3" max="8" placeholder="ft">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="height-in">Inches</label>
+                        <input type="number" id="height-in" min="0" max="11" placeholder="in">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="weight-unit">Weight Unit</label>
+                <select id="weight-unit">
+                    <option value="kg">Kilograms</option>
+                    <option value="lb">Pounds</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="weight">Current Weight</label>
+                <input type="number" id="weight" min="30" max="300" placeholder="Enter your weight">
+            </div>
+            
+            <div class="form-group">
+                <label for="activity">Activity Level (excluding walking for weight loss)
+                    <div class="tooltip">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">
+                            - Sedentary: Little or no exercise<br>
+                            - Lightly Active: Light exercise 1-3 days/week<br>
+                            - Moderately Active: Moderate exercise 3-5 days/week<br>
+                            - Very Active: Hard exercise 6-7 days/week<br>
+                            - Extremely Active: Very hard exercise & physical job
+                        </span>
+                    </div>
+                </label>
+                <select id="activity">
+                    <option value="sedentary">Sedentary</option>
+                    <option value="light">Lightly Active</option>
+                    <option value="moderate">Moderately Active</option>
+                    <option value="active">Very Active</option>
+                    <option value="very_active">Extremely Active</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="weight-loss-goal">Weekly Weight Loss Goal
+                    <div class="tooltip">
+                        <span class="tooltip-icon">?</span>
+                        <span class="tooltip-text">
+                            Healthy weight loss is generally 0.5-1 kg (1-2 lbs) per week. Losing weight too quickly can be unhealthy.
+                        </span>
+                    </div>
+                </label>
+                <select id="weight-loss-goal">
+                    <option value="0.25">0.25 kg / 0.5 lb per week</option>
+                    <option value="0.5" selected>0.5 kg / 1 lb per week</option>
+                    <option value="0.75">0.75 kg / 1.5 lbs per week</option>
+                    <option value="1">1 kg / 2 lbs per week</option>
+                </select>
+            </div>
+            
+            <button onclick="calculateWalkingDistance()">Calculate</button>
+        </div>
+        
+        <div id="results" class="results">
+            <h2>Your Results</h2>
+            
+            <div class="result-item">
+                <div class="result-label">Basal Metabolic Rate (BMR)</div>
+                <div id="bmr-result" class="result-value">0 calories/day</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Total Daily Energy Expenditure (TDEE)</div>
+                <div id="tdee-result" class="result-value">0 calories/day</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Required Calorie Deficit</div>
+                <div id="deficit-result" class="result-value">0 calories/day</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Recommended Walking Distance</div>
+                <div id="distance-result" class="result-value">0 miles/day</div>
+            </div>
+            
+            <div class="goal-section">
+                <div class="goal-heading">Time to Reach Your Goal</div>
+                <div id="goal-info"></div>
+            </div>
+        </div>
+        
+        <div class="info-card">
+            <h3>How This Calculator Works</h3>
+            <p>This calculator estimates the distance you need to walk daily to achieve your weight loss goals based on creating a calorie deficit through walking. It follows these steps:</p>
+            <p>1. Calculates your Basal Metabolic Rate (BMR) using the Mifflin-St Jeor equation</p>
+            <p>2. Determines your Total Daily Energy Expenditure (TDEE) based on your activity level</p>
+            <p>3. Calculates the required calorie deficit for your weight loss goal</p>
+            <p>4. Estimates walking distance needed to burn those extra calories</p>
+            <p>Remember that nutrition plays a crucial role in weight loss. Walking alone without dietary changes may lead to slower results. For best results, combine regular walking with a balanced, calorie-controlled diet.</p>
+        </div>
+    </div>
+    
+    <script>
+        function toggleHeightFields() {
+            const heightUnit = document.getElementById('height-unit').value;
+            const cmGroup = document.getElementById('height-cm-group');
+            const ftInGroup = document.getElementById('height-ft-in-group');
+            
+            if (heightUnit === 'cm') {
+                cmGroup.style.display = 'block';
+                ftInGroup.style.display = 'none';
+            } else {
+                cmGroup.style.display = 'none';
+                ftInGroup.style.display = 'block';
+            }
+        }
+        
+        function calculateWalkingDistance() {
+            // Get input values
+            const gender = document.getElementById('gender').value;
+            const age = parseInt(document.getElementById('age').value);
+            
+            // Get height in cm
+            let heightCm;
+            const heightUnit = document.getElementById('height-unit').value;
+            if (heightUnit === 'cm') {
+                heightCm = parseFloat(document.getElementById('height-cm').value);
+            } else {
+                const feet = parseInt(document.getElementById('height-ft').value) || 0;
+                const inches = parseInt(document.getElementById('height-in').value) || 0;
+                heightCm = (feet * 30.48) + (inches * 2.54);
+            }
+            
+            // Get weight in kg
+            let weightKg;
+            const weightUnit = document.getElementById('weight-unit').value;
+            const weightValue = parseFloat(document.getElementById('weight').value);
+            if (weightUnit === 'kg') {
+                weightKg = weightValue;
+            } else {
+                weightKg = weightValue * 0.453592; // Convert pounds to kg
+            }
+            
+            const activityLevel = document.getElementById('activity').value;
+            const weightLossGoal = parseFloat(document.getElementById('weight-loss-goal').value);
+            
+            // Validate inputs
+            if (isNaN(age) || isNaN(heightCm) || isNaN(weightKg)) {
+                alert('Please fill in all required fields with valid numbers.');
+                return;
+            }
+            
+            // Calculate BMR (Mifflin-St Jeor Equation)
+            let bmr;
+            if (gender === 'male') {
+                bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * age) + 5;
+            } else {
+                bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * age) - 161;
+            }
+            
+            // Calculate TDEE based on activity level
+            let activityMultiplier;
+            switch (activityLevel) {
+                case 'sedentary':
+                    activityMultiplier = 1.2;
+                    break;
+                case 'light':
+                    activityMultiplier = 1.375;
+                    break;
+                case 'moderate':
+                    activityMultiplier = 1.55;
+                    break;
+                case 'active':
+                    activityMultiplier = 1.725;
+                    break;
+                case 'very_active':
+                    activityMultiplier = 1.9;
+                    break;
+                default:
+                    activityMultiplier = 1.2;
+            }
+            
+            const tdee = bmr * activityMultiplier;
+            
+            // Calculate required calorie deficit
+            // Weight loss goal is in kg per week
+            // 1 kg of fat = 7700 calories
+            let calorieDeficit;
+            if (weightUnit === 'kg') {
+                calorieDeficit = weightLossGoal * 7700 / 7; // Daily deficit
+            } else {
+                // Convert from pounds to kg first
+                calorieDeficit = (weightLossGoal * 0.453592) * 7700 / 7;
+            }
+            
+            // Calculate walking distance needed
+            // Average calorie burn walking = 100 calories per mile for a 180 lb person
+            // Adjust for weight
+            const caloriesPerMile = 100 * (weightKg / 81.65);
+            const milesRequired = calorieDeficit / caloriesPerMile;
+            
+            // Calculate time to goal (assuming current weight and 1 kg fat = 7700 calories)
+            // Let's assume the user wants to lose 10% of their weight
+            const targetLoss = weightKg * 0.1; // 10% of current weight
+            const totalDeficitNeeded = targetLoss * 7700; // Total calorie deficit needed
+            const daysToGoal = Math.round(totalDeficitNeeded / calorieDeficit);
+            const weeksToGoal = Math.round(daysToGoal / 7);
+            
+            // Display results
+            document.getElementById('bmr-result').textContent = Math.round(bmr) + ' calories/day';
+            document.getElementById('tdee-result').textContent = Math.round(tdee) + ' calories/day';
+            document.getElementById('deficit-result').textContent = Math.round(calorieDeficit) + ' calories/day';
+            
+            // Format miles with one decimal place
+            const milesFormatted = milesRequired.toFixed(1);
+            const kmFormatted = (milesRequired * 1.60934).toFixed(1);
+            document.getElementById('distance-result').textContent = `${milesFormatted} miles / ${kmFormatted} km per day`;
+            
+            // Display goal info
+            const goalInfo = document.getElementById('goal-info');
+            goalInfo.innerHTML = `
+                <p>To lose 10% of your current weight (${(targetLoss).toFixed(1)} kg / ${(targetLoss * 2.20462).toFixed(1)} lbs):</p>
+                <p>Approximately ${weeksToGoal} weeks (${daysToGoal} days) with this walking plan and calorie deficit.</p>
+            `;
+            
+            // Show results
+            document.getElementById('results').style.display = 'block';
+            
+            // Scroll to results
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
