@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Z-Machine Learning Demo</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .console {
+            background: #000;
+            border: 2px solid #333;
+            padding: 15px;
+            min-height: 400px;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            overflow-y: auto;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            background: #333;
+            color: #00ff00;
+            border: 1px solid #555;
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        button:hover {
+            background: #444;
+        }
+        .memory-view {
+            background: #111;
+            border: 1px solid #333;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        .status {
+            background: #222;
+            padding: 10px;
+            border-left: 3px solid #00ff00;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rudimentary Z-Machine Implementation</h1>
+    <p>This demonstrates core Z-machine concepts: bytecode execution, stack operations, and memory management.</p>
+    
+    <div class="controls">
+        <button onclick="loadProgram()">Load Sample Program</button>
+        <button onclick="step()">Step</button>
+        <button onclick="run()">Run</button>
+        <button onclick="reset()">Reset</button>
+        <button onclick="toggleEditor()">Toggle Program Editor</button>
+    </div>
+    
+    <div id="editor" style="display: none;">
+        <h3>Program Editor</h3>
+        <p>Enter bytecode as hex values (space or comma separated):</p>
+        <textarea id="programInput" rows="8" cols="80" style="font-family: 'Courier New', monospace; background: #111; color: #00ff00; border: 1px solid #333; padding: 10px;">01 48 65 6C 6C 6F 2C 20 5A 2D 4D 61 63 68 69 6E 65 21 0A 00
+02 05 03
+02 07 04  
+03 03 04 05
+04 05
+FF</textarea>
+        <br>
+        <button onclick="loadCustomProgram()">Load Custom Program</button>
+        <button onclick="showAssemblerHelp()">Show Assembly Help</button>
+        
+        <div id="assemblyHelp" style="display: none; margin-top: 15px; background: #222; padding: 15px; border: 1px solid #333;">
+            <h4>Instruction Reference:</h4>
+            <pre>01 [string] 00    - PRINT_LITERAL: Print null-terminated string
+02 [value] [local] - LOAD_CONST: Load constant into local variable  
+03 [src1] [src2] [dest] - ADD: Add two locals, store in dest
+04 [local]        - PRINT_NUM: Print number from local variable
+05 [local]        - PUSH: Push local variable onto stack
+06 [local]        - POP: Pop stack into local variable
+07 [addr_hi] [addr_lo] - JUMP: Jump to address
+08 [local] [addr_hi] [addr_lo] - JUMP_IF_ZERO: Jump if local is zero
+FF                - HALT: Stop execution
+
+Example: Print "Hi" then add 3+4=7:
+01 48 69 0A 00    // Print "Hi\n"
+02 03 00          // Load 3 into local[0]  
+02 04 01          // Load 4 into local[1]
+03 00 01 02       // Add local[0]+local[1] -> local[2]
+04 02             // Print local[2]
+FF                // Halt</pre>
+        </div>
+    </div>
+    
+    <div class="status" id="status">Status: Ready</div>
+    
+    <div class="console" id="console"></div>
+    
+    <div class="memory-view">
+        <strong>Memory View (first 64 bytes):</strong>
+        <div id="memory"></div>
+    </div>
+    
+    <div class="memory-view">
+        <strong>Stack:</strong>
+        <div id="stack"></div>
+    </div>
+    
+    <div class="memory-view">
+        <strong>Registers:</strong>
+        <div id="registers"></div>
+    </div>
+
+    <script>
+        class SimpleZMachine {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.memory = new Uint8Array(1024); // 1KB memory
+                this.pc = 0; // Program counter
+                this.stack = [];
+                this.running = false;
+                this.output = "";
+                this.locals = new Array(15).fill(0); // Local variables
+                this.globals = new Array(240).fill(0); // Global variables
+            }
+            
+            // Load a simple program into memory
+            loadProgram() {
+                const program = [
+                    // Simple program that prints "Hello, Z-Machine!" and does some arithmetic
+                    0x01, 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20, // PRINT_LITERAL "Hello, "
+                    0x5A, 0x2D, 0x4D, 0x61, 0x63, 0x68, 0x69, 0x6E,
+                    0x65, 0x21, 0x0A, 0x00, // "Z-Machine!\n"
+                    0x02, 0x05, 0x03,       // LOAD_CONST 5 into local[0]
+                    0x02, 0x07, 0x04,       // LOAD_CONST 7 into local[1]  
+                    0x03, 0x03, 0x04, 0x05, // ADD local[0] + local[1] -> local[2]
+                    0x04, 0x05,             // PRINT_NUM local[2]
+                    0xFF                    // HALT
+                ];
+                
+                for (let i = 0; i < program.length; i++) {
+                    this.memory[i] = program[i];
+                }
+                
+                this.pc = 0;
+                this.output = "";
+                this.updateDisplay();
+            }
+            
+            // Execute one instruction
+            step() {
+                if (this.pc >= this.memory.length) {
+                    this.running = false;
+                    return false;
+                }
+                
+                const opcode = this.memory[this.pc++];
+                
+                switch (opcode) {
+                    case 0x01: // PRINT_LITERAL
+                        this.printLiteral();
+                        break;
+                        
+                    case 0x02: // LOAD_CONST
+                        this.loadConstant();
+                        break;
+                        
+                    case 0x03: // ADD
+                        this.add();
+                        break;
+                        
+                    case 0x04: // PRINT_NUM
+                        this.printNumber();
+                        break;
+                        
+                    case 0xFF: // HALT
+                        this.running = false;
+                        this.output += "\n[Program terminated]\n";
+                        return false;
+                        
+                    default:
+                        this.output += `\n[Unknown opcode: 0x${opcode.toString(16)}]\n`;
+                        this.running = false;
+                        return false;
+                }
+                
+                this.updateDisplay();
+                return this.running;
+            }
+            
+            printLiteral() {
+                let str = "";
+                while (this.pc < this.memory.length) {
+                    const char = this.memory[this.pc++];
+                    if (char === 0) break;
+                    str += String.fromCharCode(char);
+                }
+                this.output += str;
+            }
+            
+            loadConstant() {
+                const value = this.memory[this.pc++];
+                const localIndex = this.memory[this.pc++];
+                this.locals[localIndex] = value;
+            }
+            
+            add() {
+                const src1 = this.memory[this.pc++];
+                const src2 = this.memory[this.pc++];
+                const dest = this.memory[this.pc++];
+                this.locals[dest] = this.locals[src1] + this.locals[src2];
+            }
+            
+            printNumber() {
+                const localIndex = this.memory[this.pc++];
+                const value = this.locals[localIndex];
+                this.output += value.toString();
+            }
+            
+            push() {
+                const localIndex = this.memory[this.pc++];
+                this.stack.push(this.locals[localIndex]);
+            }
+            
+            pop() {
+                const localIndex = this.memory[this.pc++];
+                if (this.stack.length > 0) {
+                    this.locals[localIndex] = this.stack.pop();
+                } else {
+                    this.output += "[Stack underflow!]";
+                }
+            }
+            
+            jump() {
+                const addrHi = this.memory[this.pc++];
+                const addrLo = this.memory[this.pc++];
+                this.pc = (addrHi << 8) | addrLo;
+            }
+            
+            jumpIfZero() {
+                const localIndex = this.memory[this.pc++];
+                const addrHi = this.memory[this.pc++];
+                const addrLo = this.memory[this.pc++];
+                if (this.locals[localIndex] === 0) {
+                    this.pc = (addrHi << 8) | addrLo;
+                }
+            }
+            
+            updateDisplay() {
+                document.getElementById('console').textContent = this.output;
+                document.getElementById('status').textContent = 
+                    `Status: ${this.running ? 'Running' : 'Stopped'} | PC: ${this.pc} | Stack Size: ${this.stack.length}`;
+                
+                // Memory view
+                let memView = "";
+                for (let i = 0; i < 64; i += 8) {
+                    memView += `${i.toString(16).padStart(2, '0')}: `;
+                    for (let j = 0; j < 8 && i + j < 64; j++) {
+                        const addr = i + j;
+                        const val = this.memory[addr].toString(16).padStart(2, '0');
+                        memView += `${val} `;
+                    }
+                    memView += "\n";
+                }
+                document.getElementById('memory').textContent = memView;
+                
+                // Stack view
+                document.getElementById('stack').textContent = 
+                    this.stack.length ? this.stack.join(', ') : '(empty)';
+                
+                // Registers view
+                let regView = `PC: ${this.pc}\n`;
+                regView += `Locals: [${this.locals.slice(0, 8).join(', ')}...]\n`;
+                regView += `Running: ${this.running}`;
+                document.getElementById('registers').textContent = regView;
+            }
+        }
+        
+        const zmachine = new SimpleZMachine();
+        
+        function loadProgram() {
+            zmachine.loadProgram();
+            document.getElementById('status').textContent = "Program loaded";
+        }
+        
+        function step() {
+            if (!zmachine.running && zmachine.pc === 0) {
+                zmachine.running = true;
+            }
+            zmachine.step();
+        }
+        
+        function run() {
+            if (!zmachine.running && zmachine.pc === 0) {
+                zmachine.running = true;
+            }
+            
+            const runLoop = () => {
+                if (zmachine.step()) {
+                    setTimeout(runLoop, 100); // Delay for visualization
+                }
+            };
+            runLoop();
+        }
+        
+        function reset() {
+            zmachine.reset();
+            zmachine.updateDisplay();
+        }
+        
+        function toggleEditor() {
+            const editor = document.getElementById('editor');
+            editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function loadCustomProgram() {
+            const input = document.getElementById('programInput').value;
+            const bytes = input.split(/[\s,]+/)
+                .filter(b => b.trim())
+                .map(b => {
+                    const val = parseInt(b.trim(), 16);
+                    if (isNaN(val) || val < 0 || val > 255) {
+                        throw new Error(`Invalid byte: ${b}`);
+                    }
+                    return val;
+                });
+            
+            if (bytes.length === 0) {
+                alert('No valid bytes found');
+                return;
+            }
+            
+            try {
+                zmachine.reset();
+                for (let i = 0; i < bytes.length && i < zmachine.memory.length; i++) {
+                    zmachine.memory[i] = bytes[i];
+                }
+                zmachine.updateDisplay();
+                document.getElementById('status').textContent = `Custom program loaded (${bytes.length} bytes)`;
+            } catch (error) {
+                alert('Error loading program: ' + error.message);
+            }
+        }
+        
+        function showAssemblerHelp() {
+            const help = document.getElementById('assemblyHelp');
+            help.style.display = help.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // Initialize display
+        zmachine.updateDisplay();
+    </script>
+</body>
+</html>
