@@ -7,115 +7,322 @@
     <style>
         body {
             font-family: 'Courier New', monospace;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
             background: #1a1a1a;
             color: #00ff00;
+            line-height: 1.4;
+        }
+        .header {
+            margin-bottom: 30px;
+        }
+        .title {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #34d399;
+            text-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+        }
+        .subtitle {
+            color: #9ca3af;
+            margin-bottom: 20px;
         }
         .console {
             background: #000;
             border: 2px solid #333;
             padding: 15px;
-            min-height: 400px;
+            min-height: 300px;
             margin: 20px 0;
             white-space: pre-wrap;
             overflow-y: auto;
         }
         .controls {
             margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         button {
             background: #333;
             color: #00ff00;
             border: 1px solid #555;
             padding: 10px 15px;
-            margin: 5px;
             cursor: pointer;
             font-family: inherit;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         button:hover {
             background: #444;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
-        .memory-view {
+        button.secondary {
+            background: #1e40af;
+            color: #dbeafe;
+            border-color: #2563eb;
+        }
+        button.secondary:hover {
+            background: #2563eb;
+        }
+        button.accent {
+            background: #7c3aed;
+            color: #ede9fe;
+            border-color: #8b5cf6;
+        }
+        button.accent:hover {
+            background: #8b5cf6;
+        }
+        button.success {
+            background: #059669;
+            color: #d1fae5;
+            border-color: #10b981;
+        }
+        button.success:hover {
+            background: #10b981;
+        }
+        .panel {
             background: #111;
             border: 1px solid #333;
-            padding: 10px;
+            padding: 15px;
             margin: 10px 0;
-            font-size: 12px;
+            border-radius: 6px;
         }
         .status {
             background: #222;
-            padding: 10px;
-            border-left: 3px solid #00ff00;
-            margin: 10px 0;
+            padding: 12px;
+            border-left: 4px solid #00ff00;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .editor {
+            display: none;
+            background: #1f2937;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #374151;
+            margin: 20px 0;
+        }
+        .editor.show {
+            display: block;
+        }
+        .editor h3 {
+            color: #34d399;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        .editor textarea {
+            width: 100%;
+            height: 150px;
+            background: #000;
+            color: #00ff00;
+            border: 1px solid #555;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        .editor textarea:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 0 1px #00ff00;
+        }
+        .help {
+            display: none;
+            margin-top: 15px;
+            background: #374151;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #4b5563;
+        }
+        .help.show {
+            display: block;
+        }
+        .help h4 {
+            color: #34d399;
+            margin-bottom: 10px;
+        }
+        .help pre {
+            font-size: 0.8rem;
+            color: #e5e7eb;
+            line-height: 1.4;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        @media (min-width: 1024px) {
+            .grid {
+                grid-template-columns: 2fr 1fr;
+            }
+            .full-width {
+                grid-column: 1 / -1;
+            }
+        }
+        .assembly-view {
+            height: 400px;
+            overflow-y: auto;
+            background: #111;
+            border: 1px solid #333;
+            padding: 12px;
+            border-radius: 6px;
+        }
+        .instruction {
+            display: flex;
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+            padding: 2px 0;
+            border-radius: 3px;
+        }
+        .instruction.current {
+            background: #92400e;
+            color: #fef3c7;
+            font-weight: bold;
+        }
+        .instruction.executed {
+            color: #6b7280;
+        }
+        .instruction.future {
+            color: #e5e7eb;
+        }
+        .addr {
+            width: 50px;
+            color: #60a5fa;
+            font-weight: 600;
+        }
+        .bytes {
+            width: 80px;
+            color: #9ca3af;
+            font-size: 0.8rem;
+        }
+        .mnemonic {
+            width: 100px;
+            color: #34d399;
+            font-weight: bold;
+        }
+        .operands {
+            color: #67e8f9;
+            flex: 1;
+        }
+        .pc-indicator {
+            margin-left: 8px;
+            color: #fbbf24;
+            font-weight: bold;
+        }
+        .memory-view {
+            height: 300px;
+            overflow-y: auto;
+            background: #111;
+            border: 1px solid #333;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+        .section-title {
+            color: #34d399;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
     </style>
 </head>
 <body>
-    <h1>Rudimentary Z-Machine Implementation</h1>
-    <p>This demonstrates core Z-machine concepts: bytecode execution, stack operations, and memory management.</p>
+    <div class="header">
+        <h1 class="title">Z-Machine Simulator</h1>
+        <p class="subtitle">Educational implementation demonstrating bytecode execution, disassembly, and virtual machine concepts</p>
+    </div>
     
     <div class="controls">
         <button onclick="loadProgram()">Load Sample Program</button>
         <button onclick="step()">Step</button>
         <button onclick="run()">Run</button>
         <button onclick="reset()">Reset</button>
-        <button onclick="toggleEditor()">Toggle Program Editor</button>
-    </div>
-    
-    <div id="editor" style="display: none;">
-        <h3>Program Editor</h3>
-        <p>Enter bytecode as hex values (space or comma separated):</p>
-        <textarea id="programInput" rows="8" cols="80" style="font-family: 'Courier New', monospace; background: #111; color: #00ff00; border: 1px solid #333; padding: 10px;">01 48 65 6C 6C 6F 2C 20 5A 2D 4D 61 63 68 69 6E 65 21 0A 00
-02 05 03
-02 07 04  
-03 03 04 05
-04 05
-FF</textarea>
-        <br>
-        <button onclick="loadCustomProgram()">Load Custom Program</button>
-        <button onclick="showAssemblerHelp()">Show Assembly Help</button>
-        
-        <div id="assemblyHelp" style="display: none; margin-top: 15px; background: #222; padding: 15px; border: 1px solid #333;">
-            <h4>Instruction Reference:</h4>
-            <pre>01 [string] 00    - PRINT_LITERAL: Print null-terminated string
-02 [value] [local] - LOAD_CONST: Load constant into local variable  
-03 [src1] [src2] [dest] - ADD: Add two locals, store in dest
-04 [local]        - PRINT_NUM: Print number from local variable
-05 [local]        - PUSH: Push local variable onto stack
-06 [local]        - POP: Pop stack into local variable
-07 [addr_hi] [addr_lo] - JUMP: Jump to address
-08 [local] [addr_hi] [addr_lo] - JUMP_IF_ZERO: Jump if local is zero
-FF                - HALT: Stop execution
-
-Example: Print "Hi" then add 3+4=7:
-01 48 69 0A 00    // Print "Hi\n"
-02 03 00          // Load 3 into local[0]  
-02 04 01          // Load 4 into local[1]
-03 00 01 02       // Add local[0]+local[1] -> local[2]
-04 02             // Print local[2]
-FF                // Halt</pre>
-        </div>
+        <button class="secondary" onclick="toggleEditor()">Toggle Editor</button>
+        <button class="accent" onclick="toggleView()">Toggle Assembly View</button>
     </div>
     
     <div class="status" id="status">Status: Ready</div>
     
+    <div class="editor" id="editor">
+        <h3>Program Editor</h3>
+        <p>Enter bytecode as hex values (space or comma separated):</p>
+        <textarea id="programInput">01 48 65 6C 6C 6F 2C 20 5A 2D 4D 61 63 68 69 6E 65 21 0A 00
+02 05 03
+02 07 04  
+03 03 04 05
+09 03 04 06
+04 05
+01 20 2A 20 00
+04 06
+01 20 3D 20 00
+09 05 06 07
+04 07
+FF</textarea>
+        <br>
+        <button class="success" onclick="loadCustomProgram()">Load Custom Program</button>
+        <button onclick="showAssemblerHelp()">Show Assembly Help</button>
+        
+        <div class="help" id="assemblyHelp">
+            <h4>Instruction Reference:</h4>
+            <pre>01 [string] 00         - PRINT_LITERAL: Print null-terminated string
+02 [value] [local]     - LOAD_CONST: Load constant into local variable  
+03 [src1] [src2] [dest] - ADD: Add two locals, store in dest
+04 [local]             - PRINT_NUM: Print number from local variable
+05 [local]             - PUSH: Push local variable onto stack
+06 [local]             - POP: Pop stack into local variable
+07 [addr_hi] [addr_lo] - JUMP: Jump to address
+08 [local] [addr_hi] [addr_lo] - JUMP_IF_ZERO: Jump if local is zero
+09 [src1] [src2] [dest] - MUL: Multiply two locals, store in dest
+FF                     - HALT: Stop execution
+
+Example: Print "Hi" then calculate 3+4=7 and 3*4=12:
+01 48 69 0A 00    // Print "Hi\n"
+02 03 00          // Load 3 into local[0]  
+02 04 01          // Load 4 into local[1]
+03 00 01 02       // Add local[0]+local[1] -> local[2]
+09 00 01 03       // Multiply local[0]*local[1] -> local[3]
+04 02             // Print local[2] (7)
+04 03             // Print local[3] (12)
+FF                // Halt</pre>
+        </div>
+    </div>
+
     <div class="console" id="console"></div>
     
-    <div class="memory-view">
-        <strong>Memory View (first 64 bytes):</strong>
-        <div id="memory"></div>
-    </div>
-    
-    <div class="memory-view">
-        <strong>Stack:</strong>
-        <div id="stack"></div>
-    </div>
-    
-    <div class="memory-view">
-        <strong>Registers:</strong>
-        <div id="registers"></div>
+    <div class="grid">
+        <div>
+            <div class="section-title">Assembly View / Memory View</div>
+            <div class="assembly-view" id="assemblyView"></div>
+            <div class="memory-view" id="memoryView" style="display: none;"></div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="panel">
+                <div class="section-title">Stack</div>
+                <div id="stack">(empty)</div>
+            </div>
+            
+            <div class="panel">
+                <div class="section-title">Local Variables</div>
+                <div id="locals">[0, 0, 0, 0, 0, 0, 0, 0...]</div>
+            </div>
+            
+            <div class="panel">
+                <div class="section-title">Registers</div>
+                <div id="registers">PC: 0<br>Running: false</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -125,39 +332,23 @@ FF                // Halt</pre>
             }
             
             reset() {
-                this.memory = new Uint8Array(1024); // 1KB memory
-                this.pc = 0; // Program counter
+                this.memory = new Uint8Array(1024);
+                this.pc = 0;
                 this.stack = [];
                 this.running = false;
                 this.output = "";
-                this.locals = new Array(15).fill(0); // Local variables
-                this.globals = new Array(240).fill(0); // Global variables
+                this.locals = new Array(15).fill(0);
+                this.globals = new Array(240).fill(0);
             }
             
-            // Load a simple program into memory
-            loadProgram() {
-                const program = [
-                    // Simple program that prints "Hello, Z-Machine!" and does some arithmetic
-                    0x01, 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20, // PRINT_LITERAL "Hello, "
-                    0x5A, 0x2D, 0x4D, 0x61, 0x63, 0x68, 0x69, 0x6E,
-                    0x65, 0x21, 0x0A, 0x00, // "Z-Machine!\n"
-                    0x02, 0x05, 0x03,       // LOAD_CONST 5 into local[0]
-                    0x02, 0x07, 0x04,       // LOAD_CONST 7 into local[1]  
-                    0x03, 0x03, 0x04, 0x05, // ADD local[0] + local[1] -> local[2]
-                    0x04, 0x05,             // PRINT_NUM local[2]
-                    0xFF                    // HALT
-                ];
-                
-                for (let i = 0; i < program.length; i++) {
+            loadProgram(program) {
+                for (let i = 0; i < program.length && i < this.memory.length; i++) {
                     this.memory[i] = program[i];
                 }
-                
                 this.pc = 0;
                 this.output = "";
-                this.updateDisplay();
             }
             
-            // Execute one instruction
             step() {
                 if (this.pc >= this.memory.length) {
                     this.running = false;
@@ -167,34 +358,25 @@ FF                // Halt</pre>
                 const opcode = this.memory[this.pc++];
                 
                 switch (opcode) {
-                    case 0x01: // PRINT_LITERAL
-                        this.printLiteral();
-                        break;
-                        
-                    case 0x02: // LOAD_CONST
-                        this.loadConstant();
-                        break;
-                        
-                    case 0x03: // ADD
-                        this.add();
-                        break;
-                        
-                    case 0x04: // PRINT_NUM
-                        this.printNumber();
-                        break;
-                        
-                    case 0xFF: // HALT
+                    case 0x01: this.printLiteral(); break;
+                    case 0x02: this.loadConstant(); break;
+                    case 0x03: this.add(); break;
+                    case 0x04: this.printNumber(); break;
+                    case 0x05: this.push(); break;
+                    case 0x06: this.pop(); break;
+                    case 0x07: this.jump(); break;
+                    case 0x08: this.jumpIfZero(); break;
+                    case 0x09: this.multiply(); break;
+                    case 0xFF:
                         this.running = false;
                         this.output += "\n[Program terminated]\n";
                         return false;
-                        
                     default:
                         this.output += `\n[Unknown opcode: 0x${opcode.toString(16)}]\n`;
                         this.running = false;
                         return false;
                 }
                 
-                this.updateDisplay();
                 return this.running;
             }
             
@@ -219,6 +401,13 @@ FF                // Halt</pre>
                 const src2 = this.memory[this.pc++];
                 const dest = this.memory[this.pc++];
                 this.locals[dest] = this.locals[src1] + this.locals[src2];
+            }
+            
+            multiply() {
+                const src1 = this.memory[this.pc++];
+                const src2 = this.memory[this.pc++];
+                const dest = this.memory[this.pc++];
+                this.locals[dest] = this.locals[src1] * this.locals[src2];
             }
             
             printNumber() {
@@ -256,41 +445,218 @@ FF                // Halt</pre>
                 }
             }
             
+            disassemble(startAddr = 0, endAddr = 64) {
+                const instructions = [];
+                let addr = startAddr;
+                
+                while (addr < endAddr && addr < this.memory.length && instructions.length < 100) {
+                    const opcode = this.memory[addr];
+                    let instruction = { addr, opcode, mnemonic: 'UNKNOWN', operands: [], size: 1 };
+                    
+                    switch (opcode) {
+                        case 0x01: // PRINT_LITERAL
+                            instruction.mnemonic = 'PRINT_LITERAL';
+                            addr++;
+                            let str = '';
+                            while (addr < this.memory.length && this.memory[addr] !== 0) {
+                                str += String.fromCharCode(this.memory[addr]);
+                                addr++;
+                            }
+                            if (addr < this.memory.length) addr++;
+                            instruction.operands = [`"${str.replace(/\n/g, '\\n')}"`];
+                            instruction.size = addr - instruction.addr;
+                            break;
+                            
+                        case 0x02: // LOAD_CONST
+                            instruction.mnemonic = 'LOAD_CONST';
+                            if (addr + 2 < this.memory.length) {
+                                instruction.operands = [this.memory[addr + 1], `local[${this.memory[addr + 2]}]`];
+                                instruction.size = 3;
+                                addr += 3;
+                            } else addr++;
+                            break;
+                            
+                        case 0x03: // ADD
+                            instruction.mnemonic = 'ADD';
+                            if (addr + 3 < this.memory.length) {
+                                instruction.operands = [
+                                    `local[${this.memory[addr + 1]}]`,
+                                    `local[${this.memory[addr + 2]}]`,
+                                    `local[${this.memory[addr + 3]}]`
+                                ];
+                                instruction.size = 4;
+                                addr += 4;
+                            } else addr++;
+                            break;
+                            
+                        case 0x04: // PRINT_NUM
+                            instruction.mnemonic = 'PRINT_NUM';
+                            if (addr + 1 < this.memory.length) {
+                                instruction.operands = [`local[${this.memory[addr + 1]}]`];
+                                instruction.size = 2;
+                                addr += 2;
+                            } else addr++;
+                            break;
+                            
+                        case 0x05: // PUSH
+                            instruction.mnemonic = 'PUSH';
+                            if (addr + 1 < this.memory.length) {
+                                instruction.operands = [`local[${this.memory[addr + 1]}]`];
+                                instruction.size = 2;
+                                addr += 2;
+                            } else addr++;
+                            break;
+                            
+                        case 0x06: // POP
+                            instruction.mnemonic = 'POP';
+                            if (addr + 1 < this.memory.length) {
+                                instruction.operands = [`local[${this.memory[addr + 1]}]`];
+                                instruction.size = 2;
+                                addr += 2;
+                            } else addr++;
+                            break;
+                            
+                        case 0x07: // JUMP
+                            instruction.mnemonic = 'JUMP';
+                            if (addr + 2 < this.memory.length) {
+                                const target = (this.memory[addr + 1] << 8) | this.memory[addr + 2];
+                                instruction.operands = [`0x${target.toString(16).padStart(4, '0')}`];
+                                instruction.size = 3;
+                                addr += 3;
+                            } else addr++;
+                            break;
+                            
+                        case 0x08: // JUMP_IF_ZERO
+                            instruction.mnemonic = 'JUMP_IF_ZERO';
+                            if (addr + 3 < this.memory.length) {
+                                const target = (this.memory[addr + 2] << 8) | this.memory[addr + 3];
+                                instruction.operands = [
+                                    `local[${this.memory[addr + 1]}]`,
+                                    `0x${target.toString(16).padStart(4, '0')}`
+                                ];
+                                instruction.size = 4;
+                                addr += 4;
+                            } else addr++;
+                            break;
+                            
+                        case 0x09: // MUL
+                            instruction.mnemonic = 'MUL';
+                            if (addr + 3 < this.memory.length) {
+                                instruction.operands = [
+                                    `local[${this.memory[addr + 1]}]`,
+                                    `local[${this.memory[addr + 2]}]`,
+                                    `local[${this.memory[addr + 3]}]`
+                                ];
+                                instruction.size = 4;
+                                addr += 4;
+                            } else addr++;
+                            break;
+                            
+                        case 0xFF: // HALT
+                            instruction.mnemonic = 'HALT';
+                            instruction.operands = [];
+                            addr++;
+                            break;
+                            
+                        default:
+                            instruction.mnemonic = `UNKNOWN_${opcode.toString(16).padStart(2, '0')}`;
+                            addr++;
+                            break;
+                    }
+                    
+                    instructions.push(instruction);
+                }
+                
+                return instructions;
+            }
+            
             updateDisplay() {
                 document.getElementById('console').textContent = this.output;
                 document.getElementById('status').textContent = 
                     `Status: ${this.running ? 'Running' : 'Stopped'} | PC: ${this.pc} | Stack Size: ${this.stack.length}`;
                 
-                // Memory view
-                let memView = "";
-                for (let i = 0; i < 64; i += 8) {
-                    memView += `${i.toString(16).padStart(2, '0')}: `;
-                    for (let j = 0; j < 8 && i + j < 64; j++) {
-                        const addr = i + j;
-                        const val = this.memory[addr].toString(16).padStart(2, '0');
-                        memView += `${val} `;
+                // Assembly view
+                const assemblyView = document.getElementById('assemblyView');
+                if (assemblyView.style.display !== 'none') {
+                    const disassembly = this.disassemble();
+                    let html = '';
+                    for (const instr of disassembly) {
+                        const className = instr.addr === this.pc ? 'current' : 
+                                        instr.addr < this.pc ? 'executed' : 'future';
+                        
+                        let bytesStr = '';
+                        for (let i = 0; i < instr.size && i < 4; i++) {
+                            bytesStr += this.memory[instr.addr + i].toString(16).padStart(2, '0') + ' ';
+                        }
+                        
+                        html += `<div class="instruction ${className}">`;
+                        html += `<span class="addr">${instr.addr.toString(16).padStart(4, '0')}:</span>`;
+                        html += `<span class="bytes">${bytesStr.padEnd(12)}</span>`;
+                        html += `<span class="mnemonic">${instr.mnemonic}</span>`;
+                        html += `<span class="operands">${instr.operands.join(', ')}</span>`;
+                        if (instr.addr === this.pc) {
+                            html += `<span class="pc-indicator">← PC</span>`;
+                        }
+                        html += '</div>';
                     }
-                    memView += "\n";
+                    assemblyView.innerHTML = html;
                 }
-                document.getElementById('memory').textContent = memView;
+                
+                // Memory view
+                const memoryView = document.getElementById('memoryView');
+                if (memoryView.style.display !== 'none') {
+                    let memView = "";
+                    for (let i = 0; i < 64; i += 8) {
+                        memView += `${i.toString(16).padStart(2, '0')}: `;
+                        for (let j = 0; j < 8 && i + j < 64; j++) {
+                            const addr = i + j;
+                            const val = this.memory[addr].toString(16).padStart(2, '0');
+                            memView += `${val} `;
+                        }
+                        memView += "\n";
+                    }
+                    memoryView.textContent = memView;
+                }
                 
                 // Stack view
                 document.getElementById('stack').textContent = 
                     this.stack.length ? this.stack.join(', ') : '(empty)';
                 
+                // Locals view
+                document.getElementById('locals').textContent = 
+                    `[${this.locals.slice(0, 8).join(', ')}...]`;
+                
                 // Registers view
-                let regView = `PC: ${this.pc}\n`;
-                regView += `Locals: [${this.locals.slice(0, 8).join(', ')}...]\n`;
-                regView += `Running: ${this.running}`;
-                document.getElementById('registers').textContent = regView;
+                document.getElementById('registers').innerHTML = 
+                    `PC: ${this.pc}<br>Running: ${this.running}`;
             }
         }
         
         const zmachine = new SimpleZMachine();
+        let showingAssembly = true;
         
         function loadProgram() {
-            zmachine.loadProgram();
-            document.getElementById('status').textContent = "Program loaded";
+            const program = [
+                0x01, 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, 0x20,
+                0x5A, 0x2D, 0x4D, 0x61, 0x63, 0x68, 0x69, 0x6E,
+                0x65, 0x21, 0x0A, 0x00,
+                0x02, 0x05, 0x03,
+                0x02, 0x07, 0x04,
+                0x03, 0x03, 0x04, 0x05,
+                0x09, 0x03, 0x04, 0x06,
+                0x04, 0x05,
+                0x01, 0x20, 0x2A, 0x20, 0x00,
+                0x04, 0x06,
+                0x01, 0x20, 0x3D, 0x20, 0x00,
+                0x09, 0x05, 0x06, 0x07,
+                0x04, 0x07,
+                0xFF
+            ];
+            
+            zmachine.reset();
+            zmachine.loadProgram(program);
+            zmachine.updateDisplay();
+            document.getElementById('status').textContent = "Sample program loaded";
         }
         
         function step() {
@@ -298,6 +664,7 @@ FF                // Halt</pre>
                 zmachine.running = true;
             }
             zmachine.step();
+            zmachine.updateDisplay();
         }
         
         function run() {
@@ -307,7 +674,10 @@ FF                // Halt</pre>
             
             const runLoop = () => {
                 if (zmachine.step()) {
-                    setTimeout(runLoop, 100); // Delay for visualization
+                    zmachine.updateDisplay();
+                    setTimeout(runLoop, 150);
+                } else {
+                    zmachine.updateDisplay();
                 }
             };
             runLoop();
@@ -320,7 +690,23 @@ FF                // Halt</pre>
         
         function toggleEditor() {
             const editor = document.getElementById('editor');
-            editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
+            editor.classList.toggle('show');
+        }
+        
+        function toggleView() {
+            const assemblyView = document.getElementById('assemblyView');
+            const memoryView = document.getElementById('memoryView');
+            
+            if (showingAssembly) {
+                assemblyView.style.display = 'none';
+                memoryView.style.display = 'block';
+                showingAssembly = false;
+            } else {
+                assemblyView.style.display = 'block';
+                memoryView.style.display = 'none';
+                showingAssembly = true;
+            }
+            zmachine.updateDisplay();
         }
         
         function loadCustomProgram() {
@@ -342,9 +728,7 @@ FF                // Halt</pre>
             
             try {
                 zmachine.reset();
-                for (let i = 0; i < bytes.length && i < zmachine.memory.length; i++) {
-                    zmachine.memory[i] = bytes[i];
-                }
+                zmachine.loadProgram(bytes);
                 zmachine.updateDisplay();
                 document.getElementById('status').textContent = `Custom program loaded (${bytes.length} bytes)`;
             } catch (error) {
@@ -354,11 +738,12 @@ FF                // Halt</pre>
         
         function showAssemblerHelp() {
             const help = document.getElementById('assemblyHelp');
-            help.style.display = help.style.display === 'none' ? 'block' : 'none';
+            help.classList.toggle('show');
         }
         
         // Initialize display
         zmachine.updateDisplay();
+        loadProgram();
     </script>
 </body>
 </html>
