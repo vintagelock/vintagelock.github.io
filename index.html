@@ -226,6 +226,10 @@
             background: var(--tertiary-gradient);
         }
 
+        .project-card:nth-child(4) .project-icon {
+            background: var(--primary-gradient);
+        }
+
         .project-icon span {
             position: relative;
             z-index: 1;
@@ -347,6 +351,7 @@
         .project-card:nth-child(1) { animation-delay: 0.1s; }
         .project-card:nth-child(2) { animation-delay: 0.2s; }
         .project-card:nth-child(3) { animation-delay: 0.3s; }
+        .project-card:nth-child(4) { animation-delay: 0.4s; }
     </style>
 </head>
 <body>
@@ -420,6 +425,24 @@
                 </div>
                 <a href="walkcalc.html" class="project-link">
                     Calculate Route →
+                </a>
+            </article>
+
+            <article class="project-card" onclick="window.location.href='qrcode.html'">
+                <div class="project-icon">
+                    <span>⚙️</span>
+                </div>
+                <h2 class="project-title">QR Code Generator</h2>
+                <p class="project-description">
+                    A little webpage to create QR Codes from url, text, or contact info.
+                </p>
+                <div class="project-tech">
+                    <span class="tech-tag">QR Code</span>
+                    <span class="tech-tag">HTML</span>
+                    <span class="tech-tag">JavaScript</span>
+                </div>
+                <a href="qrcode.html" class="project-link">
+                    Generate QR Code →
                 </a>
             </article>
         </div>

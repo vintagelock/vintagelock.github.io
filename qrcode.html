@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .tab-active {
+            color: rgb(196 181 253);
+            border-bottom: 2px solid rgb(196 181 253);
+            background-color: rgba(88, 28, 135, 0.3);
+        }
+        .tab-inactive {
+            color: rgb(156 163 175);
+        }
+        .tab-inactive:hover {
+            color: rgb(229 231 235);
+            background-color: rgba(55, 65, 81, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900 p-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl mb-4">
+                <i data-lucide="qr-code" class="w-8 h-8 text-white"></i>
+            </div>
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2">
+                QR Code Generator
+            </h1>
+            <p class="text-gray-300 text-lg">Generate QR codes for URLs, text, and contact information</p>
+        </div>
+
+        <!-- Main Container -->
+        <div class="bg-gray-800 rounded-3xl shadow-2xl overflow-hidden border border-gray-700">
+            <!-- Tab Navigation -->
+            <div class="border-b border-gray-700">
+                <nav class="flex">
+                    <button id="urlTab" class="tab-button flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-all duration-200 tab-active">
+                        <i data-lucide="link" class="w-4 h-4"></i>
+                        URL
+                    </button>
+                    <button id="textTab" class="tab-button flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-all duration-200 tab-inactive">
+                        <i data-lucide="message-square" class="w-4 h-4"></i>
+                        Text
+                    </button>
+                    <button id="contactTab" class="tab-button flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-all duration-200 tab-inactive">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                        Contact
+                    </button>
+                </nav>
+            </div>
+
+            <div class="p-8">
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <!-- Input Section -->
+                    <div class="space-y-6">
+                        <h2 id="sectionTitle" class="text-2xl font-semibold text-gray-100 mb-4">Enter URL</h2>
+
+                        <!-- URL Input -->
+                        <div id="urlSection" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Website URL</label>
+                                <input
+                                    type="url"
+                                    id="urlInput"
+                                    placeholder="example.com or https://example.com"
+                                    class="w-full px-4 py-3 border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-gray-700 text-gray-100 placeholder-gray-400"
+                                />
+                                <p class="text-xs text-gray-400 mt-1">
+                                    Enter a website URL. If you don't include http://, we'll add https:// automatically.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Text Input -->
+                        <div id="textSection" class="space-y-4 hidden">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Text Content</label>
+                                <textarea
+                                    id="textInput"
+                                    placeholder="Enter any text to generate QR code..."
+                                    rows="4"
+                                    class="w-full px-4 py-3 border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none bg-gray-700 text-gray-100 placeholder-gray-400"
+                                ></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Contact Input -->
+                        <div id="contactSection" class="space-y-4 hidden">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">First Name</label>
+                                    <input
+                                        type="text"
+                                        id="firstName"
+                                        placeholder="John"
+                                        class="w-full px-4 py-3 border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-gray-700 text-gray-100 placeholder-gray-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Last Name</label>
+                                    <input
+                                        type="text"
+                                        id="lastName"
+                                        placeholder="Doe"
+                                        class="w-full px-4 py-3 border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-gray-700 text-gray-100 placeholder-gray-400"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Phone Number</label>
+                                <input
+                                    type="tel"
+                                    id="phone"
+                                    placeholder="+1 (555) 123-4567"
+                                    class="w-full px-4 py-3 border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-gray-700 text-gray-100 placeholder-gray-400"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
+                                <input
+                                    type="email"
+                                    id="email"
+                                    placeholder="john.doe@example.com"
+                                    class="w-full px-4 py-3 border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-gray-700 text-gray-100 placeholder-gray-400"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Organization</label>
+                                <input
+                                    type="text"
+                                    id="organization"
+                                    placeholder="Company Name"
+                                    class="w-full px-4 py-3 border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-gray-700 text-gray-100 placeholder-gray-400"
+                                />
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Website</label>
+                                <input
+                                    type="url"
+                                    id="website"
+                                    placeholder="https://example.com"
+                                    class="w-full px-4 py-3 border border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-gray-700 text-gray-100 placeholder-gray-400"
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            id="clearBtn"
+                            class="w-full px-6 py-3 bg-gray-700 text-gray-300 rounded-xl hover:bg-gray-600 transition-all duration-200 font-medium border border-gray-600"
+                        >
+                            Clear All Fields
+                        </button>
+                    </div>
+
+                    <!-- QR Code Display Section -->
+                    <div class="flex flex-col items-center space-y-6">
+                        <h2 class="text-2xl font-semibold text-gray-100">Generated QR Code</h2>
+                        
+                        <div class="bg-gray-700 rounded-2xl p-8 w-full max-w-sm border border-gray-600">
+                            <div id="qrContainer" class="text-center">
+                                <div class="py-16">
+                                    <i data-lucide="qr-code" class="w-16 h-16 text-gray-500 mx-auto mb-4"></i>
+                                    <p class="text-gray-400">Fill in the form to generate your QR code</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="actionButtons" class="flex gap-4 w-full max-w-sm hidden">
+                            <button
+                                id="downloadBtn"
+                                class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-200 font-medium shadow-lg"
+                            >
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                                Download
+                            </button>
+                            
+                            <button
+                                id="copyBtn"
+                                class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-700 text-gray-300 rounded-xl hover:bg-gray-600 transition-all duration-200 font-medium border border-gray-600"
+                            >
+                                <i data-lucide="copy" class="w-4 h-4"></i>
+                                Copy Data
+                            </button>
+                        </div>
+
+                        <div id="qrDataSection" class="w-full max-w-sm hidden">
+                            <h3 class="text-sm font-medium text-gray-300 mb-2">QR Code Data:</h3>
+                            <div class="bg-gray-700 rounded-lg p-3 text-xs text-gray-300 max-h-32 overflow-y-auto border border-gray-600">
+                                <pre id="qrDataText" class="whitespace-pre-wrap break-words"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-8 text-gray-400 text-sm">
+            <p>Generate QR codes instantly • No data stored • Free to use</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        let activeTab = 'url';
+        let currentQRData = '';
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabId = button.id.replace('Tab', '');
+                switchTab(tabId);
+            });
+        });
+
+        function switchTab(tab) {
+            activeTab = tab;
+            
+            // Update tab appearance
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.className = btn.className.replace('tab-active', 'tab-inactive');
+            });
+            document.getElementById(tab + 'Tab').className = 
+                document.getElementById(tab + 'Tab').className.replace('tab-inactive', 'tab-active');
+            
+            // Update section visibility
+            document.getElementById('urlSection').classList.add('hidden');
+            document.getElementById('textSection').classList.add('hidden');
+            document.getElementById('contactSection').classList.add('hidden');
+            document.getElementById(tab + 'Section').classList.remove('hidden');
+            
+            // Update section title
+            const titles = {
+                url: 'Enter URL',
+                text: 'Enter Text',
+                contact: 'Contact Information'
+            };
+            document.getElementById('sectionTitle').textContent = titles[tab];
+            
+            // Generate QR code for current data
+            generateQRCode();
+        }
+
+        function formatUrl(url) {
+            if (!url.trim()) return '';
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                return 'https://' + url;
+            }
+            return url;
+        }
+
+        function generateVCard() {
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+            const organization = document.getElementById('organization').value;
+            const website = document.getElementById('website').value;
+
+            if (!firstName && !lastName && !phone && !email) {
+                return '';
+            }
+
+            return `BEGIN:VCARD
+VERSION:3.0
+FN:${firstName} ${lastName}
+N:${lastName};${firstName};;;
+ORG:${organization}
+TEL:${phone}
+EMAIL:${email}
+URL:${website}
+END:VCARD`;
+        }
+
+        function getCurrentData() {
+            switch (activeTab) {
+                case 'url':
+                    return formatUrl(document.getElementById('urlInput').value);
+                case 'text':
+                    return document.getElementById('textInput').value;
+                case 'contact':
+                    return generateVCard();
+                default:
+                    return '';
+            }
+        }
+
+        function generateQRCode() {
+            const data = getCurrentData();
+            currentQRData = data;
+            
+            const container = document.getElementById('qrContainer');
+            
+            if (!data.trim()) {
+                container.innerHTML = `
+                    <div class="py-16">
+                        <i data-lucide="qr-code" class="w-16 h-16 text-gray-500 mx-auto mb-4"></i>
+                        <p class="text-gray-400">Fill in the form to generate your QR code</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                document.getElementById('actionButtons').classList.add('hidden');
+                document.getElementById('qrDataSection').classList.add('hidden');
+                return;
+            }
+
+            try {
+                // Clear container
+                container.innerHTML = '';
+                
+                // Create canvas
+                const canvas = document.createElement('canvas');
+                container.appendChild(canvas);
+                
+                // Generate QR code
+                new QRious({
+                    element: canvas,
+                    value: data,
+                    size: 300,
+                    background: 'white',
+                    foreground: 'black',
+                    level: 'M'
+                });
+                
+                canvas.className = 'w-full h-auto rounded-xl shadow-lg bg-white';
+                canvas.style.maxWidth = '300px';
+                canvas.style.height = 'auto';
+                
+                // Add scan instruction
+                const instruction = document.createElement('p');
+                instruction.className = 'text-sm text-gray-300 mt-4';
+                instruction.textContent = 'Scan this QR code with your device';
+                container.appendChild(instruction);
+                
+                // Show action buttons and data
+                document.getElementById('actionButtons').classList.remove('hidden');
+                document.getElementById('qrDataSection').classList.remove('hidden');
+                document.getElementById('qrDataText').textContent = data;
+                
+            } catch (error) {
+                console.error('Error generating QR code:', error);
+                // Fallback to Google Charts API
+                generateFallbackQR(data);
+            }
+        }
+
+        function generateFallbackQR(data) {
+            const container = document.getElementById('qrContainer');
+            container.innerHTML = '';
+            
+            const img = document.createElement('img');
+            const encodedData = encodeURIComponent(data);
+            img.src = `https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=${encodedData}&choe=UTF-8`;
+            img.alt = 'Generated QR Code';
+            img.className = 'w-full h-auto rounded-xl shadow-lg bg-white p-4';
+            img.style.maxWidth = '300px';
+            img.style.height = 'auto';
+            
+            img.onerror = () => {
+                img.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedData}&format=png&margin=10`;
+            };
+            
+            container.appendChild(img);
+            
+            const instruction = document.createElement('p');
+            instruction.className = 'text-sm text-gray-300 mt-4';
+            instruction.textContent = 'Scan this QR code with your device';
+            container.appendChild(instruction);
+            
+            document.getElementById('actionButtons').classList.remove('hidden');
+            document.getElementById('qrDataSection').classList.remove('hidden');
+            document.getElementById('qrDataText').textContent = data;
+        }
+
+        // Event listeners for input changes
+        document.getElementById('urlInput').addEventListener('input', generateQRCode);
+        document.getElementById('textInput').addEventListener('input', generateQRCode);
+        document.getElementById('firstName').addEventListener('input', generateQRCode);
+        document.getElementById('lastName').addEventListener('input', generateQRCode);
+        document.getElementById('phone').addEventListener('input', generateQRCode);
+        document.getElementById('email').addEventListener('input', generateQRCode);
+        document.getElementById('organization').addEventListener('input', generateQRCode);
+        document.getElementById('website').addEventListener('input', generateQRCode);
+
+        // Clear button
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            document.getElementById('urlInput').value = '';
+            document.getElementById('textInput').value = '';
+            document.getElementById('firstName').value = '';
+            document.getElementById('lastName').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('organization').value = '';
+            document.getElementById('website').value = '';
+            generateQRCode();
+        });
+
+        // Download button
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            if (!currentQRData) return;
+            
+            const canvas = document.querySelector('#qrContainer canvas');
+            const img = document.querySelector('#qrContainer img');
+            
+            if (canvas) {
+                const link = document.createElement('a');
+                link.download = `qr-code-${activeTab}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            } else if (img) {
+                const link = document.createElement('a');
+                link.download = `qr-code-${activeTab}.png`;
+                link.href = img.src;
+                link.click();
+            }
+        });
+
+        // Copy button
+        document.getElementById('copyBtn').addEventListener('click', async () => {
+            if (currentQRData) {
+                try {
+                    await navigator.clipboard.writeText(currentQRData);
+                    const copyBtn = document.getElementById('copyBtn');
+                    const originalHTML = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4 text-green-400"></i> Copied!';
+                    lucide.createIcons();
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalHTML;
+                        lucide.createIcons();
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                }
+            }
+        });
+
+        // Initialize on page load
+        generateQRCode();
+    </script>
+</body>
+</html>
