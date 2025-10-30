@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Codepage 65001 / Character Validator (Dark Mode)</title>
+<style>
+  :root {
+    --bg: #1e1f22;
+    --fg: #e0e3eb;
+    --accent: #61dafb;
+    --error: #ff6b6b;
+    --warn: #ffd43b;
+    --panel: #2b2d31;
+    --border: #3a3d43;
+    --muted: #9aa1b0;
+    --highlight-bg: #3b3d42;
+  }
+  body {
+    font-family: "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.4;
+    padding: 18px;
+  }
+  h1 {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+  p.note {
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  .container {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 18px;
+  }
+  textarea {
+    width: 100%;
+    height: 360px;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 13px;
+    background: var(--panel);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    resize: vertical;
+  }
+  .controls {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: 8px;
+  }
+  label {
+    display: block;
+    margin: 8px 0 4px;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  select, input[type=checkbox] {
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px;
+  }
+  button {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 0;
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button:hover {
+    background: #4cc8eb;
+  }
+  button.secondary {
+    background: var(--highlight-bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+  }
+  .result {
+    margin-top: 12px;
+  }
+  .preview {
+    white-space: pre-wrap;
+    padding: 10px;
+    border-radius: 6px;
+    background: var(--highlight-bg);
+    border: 1px solid var(--border);
+    min-height: 200px;
+    overflow: auto;
+    font-family: monospace;
+  }
+  .bad {
+    background: var(--error);
+    color: #000;
+    border-radius: 3px;
+  }
+  .warn {
+    background: var(--warn);
+    color: #000;
+    border-radius: 3px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 13px;
+  }
+  th, td {
+    border-bottom: 1px solid var(--border);
+    padding: 6px 8px;
+    text-align: left;
+  }
+  .small {
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--highlight-bg);
+    color: var(--fg);
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .footer {
+    margin-top: 16px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .controls-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+  <h1>Codepage Validator — CP65001 (UTF-8)</h1>
+  <p class="note">
+    CP65001 is UTF-8 (can encode all Unicode).  
+    Use this tool to highlight:
+    <ul>
+      <li>Non-ASCII characters (byte values &gt;127)</li>
+      <li>Control characters (invisible / unprintable)</li>
+      <li>Or characters outside Windows-1252</li>
+    </ul>
+  </p>
+
+  <div class="container">
+    <div>
+      <label for="input">Paste text here</label>
+      <textarea id="input" placeholder="Paste your source / text here..."></textarea>
+
+      <div style="margin-top:12px">
+        <label>Preview (invalids highlighted)</label>
+        <div id="preview" class="preview"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <button id="runBtn">Highlight now</button>
+        <button id="cleanBtn" class="secondary">Copy cleaned (remove invalid)</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <label for="encoding">Code page check</label>
+      <div class="controls-row">
+        <select id="encoding">
+          <option value="utf8">UTF-8 (CP65001) — all valid</option>
+          <option value="ascii">ASCII (0x00–0x7F)</option>
+          <option value="win1252">Windows-1252 (ANSI)</option>
+        </select>
+        <label><input type="checkbox" id="showControls" checked> Show control chars</label>
+      </div>
+
+      <div class="result" id="resultBlock">
+        <div class="small"><strong>Invalid characters:</strong> <span id="invalidCount">0</span></div>
+        <table id="invalidTable" style="display:none">
+          <thead><tr><th>Char</th><th>Code point</th><th>Hex</th><th>Description</th></tr></thead>
+          <tbody id="invalidBody"></tbody>
+        </table>
+        <div style="margin-top:8px" class="small">
+          <strong>Legend:</strong>
+          <span class="badge" style="background:var(--error);color:#000">invalid</span>
+          <span class="badge" style="background:var(--warn);color:#000;margin-left:8px">control</span>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <label class="small">Actions</label>
+        <div>
+          <button id="copyHighlight" class="secondary">Copy highlighted HTML</button>
+          <button id="download" class="secondary">Download .txt (cleaned)</button>
+        </div>
+      </div>
+
+      <div class="footer">
+        UTF-8 accepts all Unicode.  
+        Choose ASCII or Windows-1252 to see restricted-set highlights.
+      </div>
+    </div>
+  </div>
+
+<script>
+// same JS as before — compacted slightly
+(function(){
+  const win1252Extra=[0x20AC,0x201A,0x0192,0x201E,0x2026,0x2020,0x2021,0x02C6,0x2030,0x0160,0x2039,0x0152,0x017D,0x2018,0x2019,0x201C,0x201D,0x2022,0x2013,0x2014,0x02DC,0x2122,0x0161,0x203A,0x0153,0x017E,0x0178];
+  const win1252Allowed=new Set();for(let i=0;i<=0x7F;i++)win1252Allowed.add(i);for(let i=0xA0;i<=0xFF;i++)win1252Allowed.add(i);for(const cp of win1252Extra)win1252Allowed.add(cp);
+  const $=id=>document.getElementById(id);
+  const input=$('input'),preview=$('preview'),encoding=$('encoding'),showControls=$('showControls');
+  const runBtn=$('runBtn'),invalidCount=$('invalidCount'),invalidBody=$('invalidBody'),invalidTable=$('invalidTable');
+  const cleanBtn=$('cleanBtn'),copyHighlight=$('copyHighlight'),downloadBtn=$('download');
+  function hex(n,p=4){return'0x'+n.toString(16).toUpperCase().padStart(p,'0');}
+  function codeName(cp){if(cp===10)return'LF';if(cp===13)return'CR';if(cp===9)return'TAB';if(cp<32)return'C0 control';if(cp>=127&&cp<=159)return'C1 control';return'Printable';}
+  function renderHighlight(text,mode,showCtrl){
+    invalidBody.innerHTML='';let invalidList=[];let out='';
+    for(let i=0;i<text.length;i++){
+      const ch=text[i];let cp=ch.codePointAt(0);if(cp>0xFFFF)i++;
+      let isCtrl=(cp<32&&cp!==9&&cp!==10&&cp!==13)||(cp>=127&&cp<=159);let isInvalid=false;
+      if(mode==='ascii')isInvalid=cp>127;else if(mode==='win1252')isInvalid=!win1252Allowed.has(cp);
+      if(!showCtrl&&isCtrl)isInvalid=false;
+      const disp=ch.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      if(isInvalid){out+=`<span class="bad" title="${codeName(cp)}">${disp}</span>`;invalidList.push({ch:disp,cp});}
+      else if(isCtrl&&showCtrl)out+=`<span class="warn" title="${codeName(cp)}">${disp}</span>`;
+      else out+=disp;
+    }
+    if(invalidList.length){invalidTable.style.display='table';invalidCount.textContent=invalidList.length;invalidBody.innerHTML='';
+      for(const it of invalidList){invalidBody.innerHTML+=`<tr><td>${it.ch}</td><td>U+${it.cp.toString(16).toUpperCase().padStart(4,'0')}</td><td>${hex(it.cp)}</td><td>${codeName(it.cp)}</td></tr>`;}
+    }else{invalidTable.style.display='none';invalidCount.textContent='0';}
+    preview.innerHTML=out||'<span style="color:var(--muted)">— empty —</span>';
+  }
+  function perform(){renderHighlight(input.value,encoding.value,showControls.checked);}
+  runBtn.onclick=perform;input.oninput=()=>{clearTimeout(window._t);window._t=setTimeout(perform,400);};
+  encoding.onchange=perform;showControls.onchange=perform;
+  function cleaned(){const t=input.value,m=encoding.value,c=showControls.checked;let o='';for(let i=0;i<t.length;i++){const ch=t[i];let cp=ch.codePointAt(0);if(cp>0xFFFF)i++;let ctrl=(cp<32&&cp!==9&&cp!==10&&cp!==13)||(cp>=127&&cp<=159);let inv=false;if(m==='ascii')inv=cp>127;else if(m==='win1252')inv=!win1252Allowed.has(cp);if(!c&&ctrl)inv=false;if(!inv)o+=ch;}return o;}
+  cleanBtn.onclick=()=>{navigator.clipboard.writeText(cleaned()).then(()=>{cleanBtn.textContent='Copied ✓';setTimeout(()=>cleanBtn.textContent='Copy cleaned (remove invalid)',1500);});};
+  copyHighlight.onclick=()=>navigator.clipboard.writeText(preview.innerHTML);
+  downloadBtn.onclick=()=>{const b=new Blob([cleaned()],{type:'text/plain'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='cleaned.txt';a.click();URL.revokeObjectURL(u);};
+  input.value=`// Example text\nHello world\nHéllo — E-acute\nEuro: €\nEmoji: 😀\nControl: \u0007`;perform();
+})();
+</script>
+</body>
+</html>
