@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WoW Class Wheel</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: transparent;
+            font-family: Arial, sans-serif;
+        }
+
+        #wheelContainer {
+            position: relative;
+            width: 500px;
+            height: 500px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+
+        #pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid #FFD700;
+            z-index: 10;
+            filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.5));
+        }
+
+        #result {
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="wheelContainer">
+        <div id="pointer"></div>
+        <canvas id="wheel" width="500" height="500"></canvas>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const classes = [
+            { name: 'Warrior', color: '#C79C6E', textColor: '#FFF' },
+            { name: 'Paladin', color: '#F58CBA', textColor: '#FFF' },
+            { name: 'Hunter', color: '#ABD473', textColor: '#000' },
+            { name: 'Rogue', color: '#FFF569', textColor: '#000' },
+            { name: 'Priest', color: '#FFFFFF', textColor: '#000' },
+            { name: 'Death Knight', color: '#C41F3B', textColor: '#FFF' },
+            { name: 'Shaman', color: '#0070DE', textColor: '#FFF' },
+            { name: 'Mage', color: '#69CCF0', textColor: '#000' },
+            { name: 'Warlock', color: '#9482C9', textColor: '#FFF' },
+            { name: 'Monk', color: '#00FF96', textColor: '#000' },
+            { name: 'Druid', color: '#FF7D0A', textColor: '#FFF' },
+            { name: 'Demon Hunter', color: '#A330C9', textColor: '#FFF' },
+            { name: 'Evoker', color: '#33937F', textColor: '#FFF' }
+        ];
+
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const resultDiv = document.getElementById('result');
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = canvas.width / 2;
+        const segmentAngle = (Math.PI * 2) / classes.length;
+
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            classes.forEach((cls, index) => {
+                const startAngle = index * segmentAngle - Math.PI / 2;
+                const endAngle = startAngle + segmentAngle;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = cls.color;
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + segmentAngle / 2);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = cls.textColor;
+                ctx.font = 'bold 16px Arial';
+                ctx.fillText(cls.name, radius * 0.65, 0);
+                ctx.restore();
+            });
+        }
+
+        drawWheel();
+
+        window.addEventListener('load', () => {
+            const spins = 5 + Math.random() * 3;
+            const randomDegree = Math.random() * 360;
+            const totalRotation = spins * 360 + randomDegree;
+            
+            canvas.style.transform = `rotate(${totalRotation}deg)`;
+            
+            setTimeout(() => {
+                const normalizedRotation = totalRotation % 360;
+                const pointerAngle = (360 - normalizedRotation) % 360;
+                const segmentIndex = Math.floor(pointerAngle / (360 / classes.length));
+                const selectedClass = classes[segmentIndex];
+                
+                resultDiv.textContent = selectedClass.name;
+                resultDiv.style.color = selectedClass.color;
+            }, 4000);
+        });
+    </script>
+</body>
+</html>
