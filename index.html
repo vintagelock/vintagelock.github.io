@@ -12,15 +12,20 @@
         }
 
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --tertiary-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             --dark-bg: #0a0a0a;
             --card-bg: rgba(255, 255, 255, 0.05);
             --text-primary: #ffffff;
             --text-secondary: #b0b0b0;
             --accent: #00ff88;
             --glow: rgba(0, 255, 136, 0.3);
+
+            /* Named card gradients — reference these in data-color attrs */
+            --grad-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --grad-pink:   linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --grad-cyan:   linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --grad-orange: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+            --grad-green:  linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            --grad-red:    linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
         }
 
         body {
@@ -49,7 +54,7 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: 
+            background:
                 radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
                 radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
                 radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.1) 0%, transparent 50%);
@@ -95,7 +100,6 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
             animation: gradientShift 3s ease-in-out infinite;
-            text-shadow: 0 0 30px var(--glow);
             position: relative;
             z-index: 1;
         }
@@ -129,12 +133,29 @@
             padding: 0 20px;
         }
 
-        /* Projects Grid */
+        /* Section heading */
+        .section-heading {
+            font-size: clamp(1.3rem, 3vw, 1.8rem);
+            font-weight: 700;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 12px;
+            margin-bottom: 30px;
+        }
+
+        /* ── CARDS ──────────────────────────────────────────────────────── */
+        /*
+         * To add a new card:
+         *   1. Copy an <article class="project-card" ...> block.
+         *   2. Set data-color to one of: purple | pink | cyan | orange | green | red
+         *   3. Fill in icon, title, description, tags, and href.
+         */
+
         .projects-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 30px;
-            padding: 40px 0 80px;
+            padding: 40px 0 60px;
         }
 
         .project-card {
@@ -145,49 +166,54 @@
             overflow: hidden;
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                        box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                        filter 0.3s ease;
             cursor: pointer;
-            transform-style: preserve-3d;
+            animation: fadeInUp 0.6s ease-out both;
         }
+
+        /* Stagger animation for up to 12 cards */
+        .project-card:nth-child(1)  { animation-delay: 0.05s; }
+        .project-card:nth-child(2)  { animation-delay: 0.10s; }
+        .project-card:nth-child(3)  { animation-delay: 0.15s; }
+        .project-card:nth-child(4)  { animation-delay: 0.20s; }
+        .project-card:nth-child(5)  { animation-delay: 0.25s; }
+        .project-card:nth-child(6)  { animation-delay: 0.30s; }
+        .project-card:nth-child(7)  { animation-delay: 0.35s; }
+        .project-card:nth-child(8)  { animation-delay: 0.40s; }
+        .project-card:nth-child(9)  { animation-delay: 0.45s; }
+        .project-card:nth-child(10) { animation-delay: 0.50s; }
+        .project-card:nth-child(11) { animation-delay: 0.55s; }
+        .project-card:nth-child(12) { animation-delay: 0.60s; }
+
+        /* Apply card colour from data-color attribute */
+        .project-card[data-color="purple"] { background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1)); border-color: rgba(102,126,234,0.2); }
+        .project-card[data-color="pink"]   { background: linear-gradient(135deg, rgba(240,147,251,0.1), rgba(245,87,108,0.1)); border-color: rgba(240,147,251,0.2); }
+        .project-card[data-color="cyan"]   { background: linear-gradient(135deg, rgba(79,172,254,0.1), rgba(0,242,254,0.1)); border-color: rgba(79,172,254,0.2); }
+        .project-card[data-color="orange"] { background: linear-gradient(135deg, rgba(247,151,30,0.1), rgba(255,210,0,0.1)); border-color: rgba(247,151,30,0.2); }
+        .project-card[data-color="green"]  { background: linear-gradient(135deg, rgba(17,153,142,0.1), rgba(56,239,125,0.1)); border-color: rgba(17,153,142,0.2); }
+        .project-card[data-color="red"]    { background: linear-gradient(135deg, rgba(235,51,73,0.1), rgba(244,92,67,0.1)); border-color: rgba(235,51,73,0.2); }
 
         .project-card::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.05), transparent);
             opacity: 0;
             transition: opacity 0.4s ease;
         }
 
         .project-card:hover {
             transform: translateY(-10px) rotateX(5deg);
-            box-shadow: 
-                0 25px 50px rgba(0, 0, 0, 0.3),
-                0 0 0 1px rgba(255, 255, 255, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            filter: brightness(1.1);
+            box-shadow:
+                0 25px 50px rgba(0,0,0,0.3),
+                0 0 0 1px rgba(255,255,255,0.1),
+                inset 0 1px 0 rgba(255,255,255,0.2);
         }
 
-        .project-card:hover::before {
-            opacity: 1;
-        }
-
-        .project-card:nth-child(1) {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-            border-color: rgba(102, 126, 234, 0.2);
-        }
-
-        .project-card:nth-child(2) {
-            background: linear-gradient(135deg, rgba(240, 147, 251, 0.1), rgba(245, 87, 108, 0.1));
-            border-color: rgba(240, 147, 251, 0.2);
-        }
-
-        .project-card:nth-child(3) {
-            background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1));
-            border-color: rgba(79, 172, 254, 0.2);
-        }
+        .project-card:hover::before { opacity: 1; }
 
         .project-icon {
             width: 70px;
@@ -205,43 +231,21 @@
         .project-icon::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            inset: 0;
             background: inherit;
             filter: blur(20px);
             transform: scale(1.5);
         }
 
-        .project-card:nth-child(1) .project-icon {
-            background: var(--primary-gradient);
-        }
+        .project-icon span { position: relative; z-index: 1; }
 
-        .project-card:nth-child(2) .project-icon {
-            background: var(--secondary-gradient);
-        }
-
-        .project-card:nth-child(3) .project-icon {
-            background: var(--tertiary-gradient);
-        }
-
-        .project-card:nth-child(4) .project-icon {
-            background: var(--primary-gradient);
-        }
-
-        .project-card:nth-child(5) .project-icon {
-            background: var(--primary-gradient);
-        }
-
-        .project-card:nth-child(6) .project-icon {
-            background: var(--primary-gradient);
-        }
-
-        .project-icon span {
-            position: relative;
-            z-index: 1;
-        }
+        /* Icon gradient derived from card colour */
+        .project-card[data-color="purple"] .project-icon { background: var(--grad-purple); }
+        .project-card[data-color="pink"]   .project-icon { background: var(--grad-pink); }
+        .project-card[data-color="cyan"]   .project-icon { background: var(--grad-cyan); }
+        .project-card[data-color="orange"] .project-icon { background: var(--grad-orange); }
+        .project-card[data-color="green"]  .project-icon { background: var(--grad-green); }
+        .project-card[data-color="red"]    .project-icon { background: var(--grad-red); }
 
         .project-title {
             font-size: 1.5rem;
@@ -264,13 +268,13 @@
         }
 
         .tech-tag {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.1);
             color: var(--text-primary);
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 500;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.1);
         }
 
         .project-link {
@@ -295,92 +299,136 @@
             transition: width 0.3s ease;
         }
 
-        .project-link:hover::after {
-            width: 100%;
-        }
+        .project-link:hover::after { width: 100%; }
 
         .project-link:hover {
             transform: translateX(5px);
-            color: #00ff88;
             text-shadow: 0 0 10px var(--glow);
+        }
+
+        /* ── LINKS / DOWNLOADS ──────────────────────────────────────────── */
+        /*
+         * To add a download link:
+         *   1. Copy a <li class="link-item"> block inside #links-list.
+         *   2. Set href to the file path, update the icon emoji and label.
+         */
+
+        .links-section {
+            padding: 20px 0 80px;
+        }
+
+        .links-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .link-item a {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 20px;
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-primary);
+            backdrop-filter: blur(20px);
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            animation: fadeInUp 0.6s ease-out both;
+        }
+
+        .link-item:nth-child(1) a { animation-delay: 0.05s; }
+        .link-item:nth-child(2) a { animation-delay: 0.10s; }
+        .link-item:nth-child(3) a { animation-delay: 0.15s; }
+        .link-item:nth-child(4) a { animation-delay: 0.20s; }
+
+        .link-item a:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px var(--accent);
+        }
+
+        .link-icon {
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+
+        .link-info { display: flex; flex-direction: column; gap: 2px; }
+
+        .link-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .link-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .link-badge {
+            margin-left: auto;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: rgba(0,255,136,0.15);
+            color: var(--accent);
+            border: 1px solid rgba(0,255,136,0.3);
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         /* Footer */
         .footer {
             text-align: center;
             padding: 60px 20px 40px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            margin-top: 40px;
+            border-top: 1px solid rgba(255,255,255,0.1);
         }
 
-        .footer-text {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .footer-highlight {
-            color: var(--accent);
-            font-weight: 600;
-        }
+        .footer-text { color: var(--text-secondary); font-size: 0.9rem; }
+        .footer-highlight { color: var(--accent); font-weight: 600; }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .header {
-                padding: 60px 20px 40px;
-            }
-            
-            .projects-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-                padding: 20px 0 40px;
-            }
-            
-            .project-card {
-                padding: 25px;
-            }
+            .header { padding: 60px 20px 40px; }
+            .projects-grid { grid-template-columns: 1fr; gap: 20px; padding: 20px 0 40px; }
+            .project-card { padding: 25px; }
         }
 
-        /* Loading animation */
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        .project-card {
-            animation: fadeInUp 0.6s ease-out forwards;
+        @keyframes ripple {
+            to { transform: scale(4); opacity: 0; }
         }
-
-        .project-card:nth-child(1) { animation-delay: 0.1s; }
-        .project-card:nth-child(2) { animation-delay: 0.2s; }
-        .project-card:nth-child(3) { animation-delay: 0.3s; }
-        .project-card:nth-child(4) { animation-delay: 0.4s; }
     </style>
 </head>
 <body>
     <div class="bg-animation"></div>
-    
+
     <header class="header">
         <h1 class="logo">VintageLock</h1>
-        <p class="tagline">Interactive Demos & Simulations</p>
+        <p class="tagline">Interactive Demos &amp; Simulations</p>
         <p class="subtitle">Exploring Computer Science Through Immersive Experiences</p>
     </header>
 
     <main class="container">
+
+        <!-- ── PROJECT CARDS ─────────────────────────────────────────────
+             To add a card: copy an <article> block, set data-color, fill content.
+             Available colours: purple | pink | cyan | orange | green | red
+        ──────────────────────────────────────────────────────────────── -->
         <div class="projects-grid">
-            <article class="project-card" onclick="window.location.href='zmachine.html'">
-                <div class="project-icon">
-                    <span>⚙️</span>
-                </div>
+
+            <article class="project-card" data-color="purple" onclick="window.location.href='zmachine.html'">
+                <div class="project-icon"><span>⚙️</span></div>
                 <h2 class="project-title">Z-Machine Simulator</h2>
                 <p class="project-description">
-                    An educational virtual machine implementation demonstrating bytecode execution, 
-                    disassembly, and core computer architecture concepts. Features step-by-step 
+                    An educational virtual machine implementation demonstrating bytecode execution,
+                    disassembly, and core computer architecture concepts. Features step-by-step
                     execution, assembly view, and interactive programming.
                 </p>
                 <div class="project-tech">
@@ -389,19 +437,15 @@
                     <span class="tech-tag">Assembly</span>
                     <span class="tech-tag">Interactive</span>
                 </div>
-                <a href="zmachine.html" class="project-link">
-                    Explore Simulator →
-                </a>
+                <a href="zmachine.html" class="project-link">Explore Simulator →</a>
             </article>
 
-            <article class="project-card" onclick="window.location.href='daisy-world-simulation.html'">
-                <div class="project-icon">
-                    <span>🌍</span>
-                </div>
+            <article class="project-card" data-color="pink" onclick="window.location.href='daisy-world-simulation.html'">
+                <div class="project-icon"><span>🌍</span></div>
                 <h2 class="project-title">Daisy World Simulation</h2>
                 <p class="project-description">
-                    A fascinating ecological model demonstrating how black and white daisies 
-                    can regulate planetary temperature through albedo feedback mechanisms. 
+                    A fascinating ecological model demonstrating how black and white daisies
+                    can regulate planetary temperature through albedo feedback mechanisms.
                     Watch evolution and climate interact in real-time.
                 </p>
                 <div class="project-tech">
@@ -410,176 +454,119 @@
                     <span class="tech-tag">Simulation</span>
                     <span class="tech-tag">Data Visualization</span>
                 </div>
-                <a href="daisy-world-simulation.html" class="project-link">
-                    Run Simulation →
-                </a>
+                <a href="daisy-world-simulation.html" class="project-link">Run Simulation →</a>
             </article>
 
-            <article class="project-card" onclick="window.location.href='walkcalc.html'">
-                <div class="project-icon">
-                    <span>🚶</span>
-                </div>
+            <article class="project-card" data-color="cyan" onclick="window.location.href='walkcalc.html'">
+                <div class="project-icon"><span>🚶</span></div>
                 <h2 class="project-title">Walking Distance Calculator</h2>
                 <p class="project-description">
-                    A comprehensive health calculator that determines optimal walking distances 
-                    for weight loss goals. Uses scientific metabolic formulas to provide 
+                    A comprehensive health calculator that determines optimal walking distances
+                    for weight loss goals. Uses scientific metabolic formulas to provide
                     personalized fitness recommendations.
                 </p>
                 <div class="project-tech">
-                    <span class="tech-tag">Health & Fitness</span>
+                    <span class="tech-tag">Health &amp; Fitness</span>
                     <span class="tech-tag">BMR Calculation</span>
                     <span class="tech-tag">Dark Theme</span>
                     <span class="tech-tag">Responsive</span>
                 </div>
-                <a href="walkcalc.html" class="project-link">
-                    Calculate Route →
-                </a>
+                <a href="walkcalc.html" class="project-link">Calculate Route →</a>
             </article>
 
-            <article class="project-card" onclick="window.location.href='qrcode.html'">
-                <div class="project-icon">
-                    <span>⚙️</span>
-                </div>
+            <article class="project-card" data-color="orange" onclick="window.location.href='qrcode.html'">
+                <div class="project-icon"><span>📱</span></div>
                 <h2 class="project-title">QR Code Generator</h2>
                 <p class="project-description">
-                    A little webpage to create QR Codes from url, text, or contact info.
+                    A little webpage to create QR Codes from URL, text, or contact info.
                 </p>
                 <div class="project-tech">
                     <span class="tech-tag">QR Code</span>
                     <span class="tech-tag">HTML</span>
                     <span class="tech-tag">JavaScript</span>
                 </div>
-                <a href="qrcode.html" class="project-link">
-                    Generate QR Code →
-                </a>
+                <a href="qrcode.html" class="project-link">Generate QR Code →</a>
             </article>
 
-            <article class="project-card" onclick="window.location.href='spinner2.html'">
-                <div class="project-icon">
-                    <span>🛞</span>
-                </div>
+            <article class="project-card" data-color="purple" onclick="window.location.href='spinner2.html'">
+                <div class="project-icon"><span>🛞</span></div>
                 <h2 class="project-title">WoW Class Spinner</h2>
                 <p class="project-description">
-                    A little class picker wheel I made for SnowMixy and her
-                    1.8 cr, all classes, challenge.
+                    A class picker wheel for SnowMixy and her 1.8 CR all-classes challenge.
                 </p>
                 <div class="project-tech">
                     <span class="tech-tag">JavaScript</span>
                     <span class="tech-tag">HTML</span>
                     <span class="tech-tag">Interactive</span>
                 </div>
-                <a href="spinner2.html" class="project-link">
-                    Spin →
-                </a>
+                <a href="spinner2.html" class="project-link">Spin →</a>
             </article>
 
-            <article class="project-card" onclick="window.location.href='charcheck.html'">
-                <div class="project-icon">
-                    <span>🛞</span>
-                </div>
+            <article class="project-card" data-color="green" onclick="window.location.href='charcheck.html'">
+                <div class="project-icon"><span>🔍</span></div>
                 <h2 class="project-title">Character Check</h2>
                 <p class="project-description">
-                    Checks source code pasted in for unicode character sequences                    
+                    Checks source code pasted in for suspicious Unicode character sequences.
                 </p>
                 <div class="project-tech">
                     <span class="tech-tag">JavaScript</span>
                     <span class="tech-tag">HTML</span>
                     <span class="tech-tag">Interactive</span>
                 </div>
-                <a href="charcheck.html" class="project-link">
-                    Check →
-                </a>
+                <a href="charcheck.html" class="project-link">Check →</a>
             </article>
 
-        </div>
+        </div><!-- /projects-grid -->
+
+        <!-- ── DOWNLOADS ──────────────────────────────────────────────────
+             To add a download: copy a <li class="link-item"> block.
+        ──────────────────────────────────────────────────────────────── -->
+        <section class="links-section" aria-labelledby="links-heading">
+            <h2 class="section-heading" id="links-heading">Downloads &amp; Scripts</h2>
+            <ul class="links-list" id="links-list">
+
+                <li class="link-item">
+                    <a href="fix-encoding.ps1" download>
+                        <span class="link-icon">📜</span>
+                        <span class="link-info">
+                            <span class="link-name">fix-encoding.ps1</span>
+                            <span class="link-desc">Fixes Unicode/encoding issues in source files</span>
+                        </span>
+                        <span class="link-badge">PowerShell</span>
+                    </a>
+                </li>
+
+            </ul>
+        </section>
+
     </main>
 
     <footer class="footer">
         <p class="footer-text">
-            Built with passion for <span class="footer-highlight">interactive learning</span> and 
+            Built with passion for <span class="footer-highlight">interactive learning</span> and
             <span class="footer-highlight">computational exploration</span>
         </p>
     </footer>
 
     <script>
-        // Add smooth scrolling and enhanced interactions
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add parallax effect to background
-            let ticking = false;
-            
-            function updateBackground() {
-                const scrolled = window.pageYOffset;
-                const bg = document.querySelector('.bg-animation::before');
-                
-                if (bg) {
-                    bg.style.transform = `translateY(${scrolled * 0.5}px)`;
-                }
-                
-                ticking = false;
-            }
-            
-            function requestTick() {
-                if (!ticking) {
-                    requestAnimationFrame(updateBackground);
-                    ticking = true;
-                }
-            }
-            
-            window.addEventListener('scroll', requestTick);
-            
-            // Add hover sound effect (visual feedback)
-            const cards = document.querySelectorAll('.project-card');
-            cards.forEach(card => {
-                card.addEventListener('mouseenter', function() {
-                    this.style.filter = 'brightness(1.1)';
-                });
-                
-                card.addEventListener('mouseleave', function() {
-                    this.style.filter = 'brightness(1)';
-                });
-            });
-            
-            // Add click ripple effect
-            cards.forEach(card => {
-                card.addEventListener('click', function(e) {
+        document.addEventListener('DOMContentLoaded', function () {
+            // Click ripple on project cards
+            document.querySelectorAll('.project-card').forEach(card => {
+                card.addEventListener('click', function (e) {
                     const rect = this.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    
                     const ripple = document.createElement('div');
                     ripple.style.cssText = `
-                        position: absolute;
-                        background: rgba(255, 255, 255, 0.3);
-                        border-radius: 50%;
-                        width: 20px;
-                        height: 20px;
-                        left: ${x - 10}px;
-                        top: ${y - 10}px;
-                        animation: ripple 0.6s ease-out;
-                        pointer-events: none;
-                        z-index: 1000;
+                        position:absolute;background:rgba(255,255,255,0.3);
+                        border-radius:50%;width:20px;height:20px;
+                        left:${e.clientX - rect.left - 10}px;
+                        top:${e.clientY - rect.top - 10}px;
+                        animation:ripple 0.6s ease-out;pointer-events:none;z-index:1000;
                     `;
-                    
                     this.appendChild(ripple);
-                    
-                    setTimeout(() => {
-                        ripple.remove();
-                    }, 600);
+                    setTimeout(() => ripple.remove(), 600);
                 });
             });
         });
-        
-        // Add ripple keyframes
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes ripple {
-                to {
-                    transform: scale(4);
-                    opacity: 0;
-                }
-            }
-        `;
-        document.head.appendChild(style);
     </script>
 </body>
 </html>
