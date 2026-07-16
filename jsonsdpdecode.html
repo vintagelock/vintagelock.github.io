@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WebRTC Answer Decoder</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-inset: #161b22;
+    --border: #30363d;
+    --fg: #c9d1d9;
+    --fg-muted: #8b949e;
+    --accent: #58a6ff;
+    --danger: #f85149;
+    --success-bg: rgba(46,160,67,0.15);
+    --success-fg: #3fb950;
+  }
+  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; background: var(--bg); color: var(--fg); }
+  h1 { font-size: 1.4rem; }
+  textarea { width: 100%; height: 160px; font-family: monospace; font-size: 0.85rem; box-sizing: border-box; padding: 0.5rem; background: var(--bg-inset); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; }
+  textarea::placeholder { color: var(--fg-muted); }
+  button { margin-top: 0.5rem; padding: 0.5rem 1.2rem; font-size: 0.95rem; cursor: pointer; background: #21262d; color: var(--fg); border: 1px solid var(--border); border-radius: 6px; }
+  button:hover { background: #30363d; }
+  #error { color: var(--danger); white-space: pre-wrap; margin-top: 0.75rem; font-family: monospace; }
+  table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+  th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; vertical-align: top; }
+  th { width: 220px; color: var(--fg-muted); font-weight: 600; }
+  code { font-family: monospace; word-break: break-all; color: var(--fg); }
+  h2 { font-size: 1.05rem; margin-top: 1.75rem; border-bottom: 2px solid var(--border); padding-bottom: 0.25rem; }
+  pre { background: var(--bg-inset); border: 1px solid var(--border); padding: 0.75rem; overflow-x: auto; font-size: 0.8rem; border-radius: 6px; color: var(--fg); }
+  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
+  .ok { background: var(--success-bg); color: var(--success-fg); }
+  .err { background: rgba(248,81,73,0.15); color: var(--danger); }
+  .hint { color: var(--fg-muted); font-size: 0.85rem; margin-top: 0.5rem; }
+  #testBtn { margin-left: 0.5rem; }
+</style>
+</head>
+<body>
+
+<h1>WebRTC Answer Decoder</h1>
+<p>Paste a WebRTC answer JSON object (with <code>sdp</code> and <code>type</code> fields) below.</p>
+
+<textarea id="input" placeholder='{"sdp":"v=0\r\n...","type":"answer"}'></textarea><br>
+<button id="decodeBtn">Decode</button>
+<button id="testBtn">Test setRemoteDescription()</button>
+<div id="error"></div>
+<div id="testResult"></div>
+<div id="output"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function parseSdp(sdp) {
+  const lines = sdp.split(/\r\n|\n/).map(l => l.trim()).filter(l => l.length);
+  const session = { attrs: {} }, media = [];
+  let cur = null;
+
+  for (const line of lines) {
+    const type = line[0];
+    const val = line.slice(2);
+    const target = cur || session;
+
+    if (type === 'm') {
+      cur = { descriptor: val, attrs: {} };
+      media.push(cur);
+      continue;
+    }
+    if (type === 'a') {
+      const idx = val.indexOf(':');
+      const key = idx === -1 ? val : val.slice(0, idx);
+      const value = idx === -1 ? true : val.slice(idx + 1);
+      if (target.attrs[key] !== undefined) {
+        target.attrs[key] = [].concat(target.attrs[key], value);
+      } else {
+        target.attrs[key] = value;
+      }
+      continue;
+    }
+    target[type] = val;
+  }
+  return { session, media };
+}
+
+function row(label, value) {
+  if (value === undefined) return '';
+  return `<tr><th>${esc(label)}</th><td><code>${esc(Array.isArray(value) ? value.join(', ') : value)}</code></td></tr>`;
+}
+
+// RFC 4572: fingerprint value is "algorithm HH:HH:...:HH" - each group must
+// be exactly 2 hex digits, and the group count must match the digest length.
+const DIGEST_HEX_GROUPS = { 'sha-1': 20, 'sha-224': 28, 'sha-256': 32, 'sha-384': 48, 'sha-512': 64, md5: 16, md2: 16 };
+
+function validateFingerprint(fp) {
+  if (typeof fp !== 'string') return null;
+  const m = fp.match(/^(\S+)\s+(.+)$/);
+  if (!m) return { ok: false, errors: ['Could not parse "algorithm hash" format.'] };
+  const [, algo, hash] = m;
+  const groups = hash.split(':');
+  const errors = [];
+  groups.forEach((g, i) => {
+    if (!/^[0-9A-Fa-f]{2}$/.test(g)) {
+      errors.push(`Group ${i + 1} ("${g}") is ${g.length} character${g.length === 1 ? '' : 's'} long, expected exactly 2 hex digits.`);
+    }
+  });
+  const expected = DIGEST_HEX_GROUPS[algo.toLowerCase()];
+  if (expected && groups.length !== expected) {
+    errors.push(`${algo} fingerprint should have ${expected} groups, found ${groups.length}.`);
+  }
+  return { algo, groups, errors, ok: errors.length === 0 };
+}
+
+function fingerprintRow(label, value) {
+  if (value === undefined) return '';
+  const check = validateFingerprint(value);
+  let html = `<tr><th>${esc(label)}</th><td><code>${esc(value)}</code> `;
+  html += check.ok
+    ? '<span class="badge ok">valid format</span>'
+    : '<span class="badge err">invalid</span>';
+  html += '</td></tr>';
+  if (!check.ok) {
+    html += `<tr><td></td><td class="hint">${check.errors.map(esc).join('<br>')}</td></tr>`;
+  }
+  return html;
+}
+
+function render(obj) {
+  const { sdp, type } = obj;
+  const { session, media } = parseSdp(sdp);
+
+  let html = `<p><span class="badge ok">type: ${esc(type)}</span></p>`;
+
+  html += '<h2>Session</h2><table>';
+  html += row('Version (v)', session.v);
+  html += row('Origin (o)', session.o);
+  html += row('Session name (s)', session.s);
+  html += row('Timing (t)', session.t);
+  html += row('Bundle group', session.attrs && session.attrs.group);
+  html += row('ICE options', session.attrs && session.attrs['ice-options']);
+  html += fingerprintRow('Fingerprint', session.attrs && session.attrs.fingerprint);
+  html += row('msid-semantic', session.attrs && session.attrs['msid-semantic']);
+  html += '</table>';
+
+  media.forEach((m, i) => {
+    html += `<h2>Media section ${i}</h2><table>`;
+    html += row('m= descriptor', m.descriptor);
+    html += row('Connection (c)', m.c);
+    html += row('mid', m.attrs.mid);
+    html += row('Direction', ['sendrecv','sendonly','recvonly','inactive'].find(d => m.attrs[d] !== undefined));
+    html += row('setup', m.attrs.setup);
+    html += row('ice-ufrag', m.attrs['ice-ufrag']);
+    html += row('ice-pwd', m.attrs['ice-pwd']);
+    html += row('sctp-port', m.attrs['sctp-port']);
+    html += row('max-message-size', m.attrs['max-message-size']);
+    html += fingerprintRow('fingerprint', m.attrs.fingerprint);
+    html += '</table>';
+  });
+
+  html += '<h2>Raw SDP</h2><pre>' + esc(sdp.replace(/\\r\\n/g, '\n')) + '</pre>';
+  return html;
+}
+
+function getInputObj() {
+  $('error').textContent = '';
+  const raw = $('input').value.trim();
+  if (!raw) { $('error').textContent = 'Paste a WebRTC answer JSON first.'; return null; }
+
+  let obj;
+  try {
+    obj = JSON.parse(raw);
+  } catch (e) {
+    $('error').textContent = 'Invalid JSON: ' + e.message;
+    return null;
+  }
+
+  if (typeof obj.sdp !== 'string') {
+    $('error').textContent = 'Missing or invalid "sdp" field (expected a string).';
+    return null;
+  }
+  if (obj.type !== 'answer') {
+    $('error').textContent = `Warning: type is "${obj.type}", expected "answer". Continuing anyway.\n\n`;
+  }
+  return obj;
+}
+
+$('decodeBtn').addEventListener('click', () => {
+  $('output').innerHTML = '';
+  const obj = getInputObj();
+  if (!obj) return;
+  try {
+    $('output').innerHTML = render(obj);
+  } catch (e) {
+    $('error').textContent += 'Failed to parse SDP: ' + e.message;
+  }
+});
+
+// Runs the pasted answer through the real browser WebRTC stack via
+// RTCPeerConnection.setRemoteDescription(), to reproduce parse/state errors exactly.
+async function trySetRemoteDescription(desc) {
+  if (typeof RTCPeerConnection === 'undefined') {
+    return { ok: false, name: 'Unsupported', message: 'RTCPeerConnection is not available in this context (try serving over http/https instead of file://).' };
+  }
+  const pc = new RTCPeerConnection();
+  try {
+    // Get into a realistic 'have-local-offer' state first so any error
+    // reported is specifically about the remote answer, not signaling state.
+    pc.createDataChannel('probe');
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await pc.setRemoteDescription(desc);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, name: e.name || 'Error', message: e.message || String(e) };
+  } finally {
+    pc.close();
+  }
+}
+
+$('testBtn').addEventListener('click', async () => {
+  $('testResult').innerHTML = '';
+  const obj = getInputObj();
+  if (!obj) return;
+
+  $('testResult').innerHTML = '<p class="hint">Running setRemoteDescription()...</p>';
+  const result = await trySetRemoteDescription(obj);
+
+  if (result.ok) {
+    $('testResult').innerHTML = '<p><span class="badge ok">setRemoteDescription() succeeded</span></p>';
+    return;
+  }
+
+  let html = `<p><span class="badge err">${esc(result.name)}</span></p><pre>${esc(result.message)}</pre>`;
+
+  const hasLeadingSpace = /\r\n |\n /.test(obj.sdp);
+  if (hasLeadingSpace && /pars|Expect line/i.test(result.message)) {
+    html += `<p class="hint">Note: this SDP has a leading space after each line break (e.g. "\\r\\n o=-" instead of "\\r\\no=-"). Per RFC 4566, SDP lines must not have leading whitespace &mdash; this is likely what's breaking the parser.</p>`;
+    html += '<button id="retryFixedBtn">Test with leading whitespace stripped</button>';
+  }
+
+  if (/fingerprint|digest/i.test(result.message)) {
+    try {
+      const { session, media } = parseSdp(obj.sdp);
+      const fps = [session.attrs.fingerprint, ...media.map(m => m.attrs.fingerprint)].filter(Boolean);
+      fps.forEach(fp => {
+        const check = validateFingerprint(fp);
+        if (check && !check.ok) {
+          html += `<p class="hint">Malformed fingerprint <code>${esc(fp)}</code>:<br>${check.errors.map(esc).join('<br>')}</p>`;
+        }
+      });
+    } catch (e) { /* parseSdp already failed elsewhere; ignore */ }
+  }
+
+  $('testResult').innerHTML = html;
+
+  const retryBtn = $('retryFixedBtn');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', async () => {
+      retryBtn.disabled = true;
+      retryBtn.textContent = 'Testing...';
+      const fixed = { ...obj, sdp: obj.sdp.replace(/(\r\n|\n) +/g, '$1') };
+      const fixedResult = await trySetRemoteDescription(fixed);
+      if (fixedResult.ok) {
+        $('testResult').innerHTML += '<p><span class="badge ok">Succeeded after stripping leading whitespace &mdash; that was the bug.</span></p>';
+      } else {
+        $('testResult').innerHTML += `<p><span class="badge err">${esc(fixedResult.name)}</span></p><pre>${esc(fixedResult.message)}</pre>`;
+      }
+    });
+  }
+});
+</script>
+
+</body>
+</html>
