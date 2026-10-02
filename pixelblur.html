@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PixelBlur</title>
+<style>
+  :root{
+    --bg:#0e0f13;
+    --panel:#15171e;
+    --panel-2:#1b1e27;
+    --border:#272b36;
+    --text:#e7e9ee;
+    --muted:#8a90a2;
+    --accent:#7c5cff;
+    --accent-2:#5a3fe0;
+    --danger:#ff5c7a;
+    --ok:#4fd1a5;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 20px;
+    border-bottom:1px solid var(--border);
+    background:var(--panel);
+    flex-shrink:0;
+  }
+  header h1{
+    font-size:16px;
+    margin:0;
+    font-weight:700;
+    letter-spacing:.3px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  header h1 .dot{color:var(--accent);}
+  header .sub{color:var(--muted);font-size:12px;margin-top:2px;}
+  header .headerActions{display:flex;gap:8px;}
+
+  button{
+    font-family:inherit;
+    cursor:pointer;
+  }
+
+  .btn{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:8px 12px;
+    border-radius:8px;
+    font-size:13px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    transition:background .15s,border-color .15s;
+  }
+  .btn:hover{background:#22262f;border-color:#343a48;}
+  .btn:active{transform:translateY(1px);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.primary:hover{background:var(--accent-2);}
+  .btn.danger{color:var(--danger);}
+  .btn.small{padding:5px 8px;font-size:12px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn.icon{padding:7px 9px;}
+
+  /* ---------- Dropzone ---------- */
+  #dropzone{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px;
+  }
+  #dropzone .inner{
+    border:2px dashed var(--border);
+    border-radius:16px;
+    padding:60px 80px;
+    text-align:center;
+    max-width:460px;
+    transition:border-color .15s, background .15s;
+    background:var(--panel);
+  }
+  #dropzone .inner.dragover{
+    border-color:var(--accent);
+    background:#1a1530;
+  }
+  #dropzone .icon{font-size:42px;margin-bottom:14px;}
+  #dropzone h2{margin:0 0 6px;font-size:18px;}
+  #dropzone p{color:var(--muted);font-size:13px;margin:0 0 20px;line-height:1.5;}
+
+  /* ---------- Editor layout ---------- */
+  #editor{
+    flex:1;
+    display:flex;
+    min-height:0;
+  }
+  #editor[hidden], #dropzone[hidden]{display:none !important;}
+
+  #sidebar{
+    width:300px;
+    flex-shrink:0;
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    overflow-y:auto;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+  .section{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .section h3{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--muted);
+    margin:0;
+  }
+
+  .toolGrid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px;
+  }
+  .toolBtn{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:10px;
+    padding:10px 4px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:5px;
+    font-size:11px;
+    transition:all .15s;
+  }
+  .toolBtn .glyph{font-size:19px;}
+  .toolBtn:hover{border-color:#3a4150;}
+  .toolBtn.active{
+    background:linear-gradient(180deg,var(--accent),var(--accent-2));
+    border-color:var(--accent);
+    color:#fff;
+  }
+
+  .segmented{
+    display:flex;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  .segmented button{
+    flex:1;
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    padding:7px 0;
+    font-size:12px;
+  }
+  .segmented button.active{
+    background:var(--accent);
+    color:#fff;
+  }
+
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .row label{font-size:12px;color:var(--muted);}
+  .row .value{font-size:12px;color:var(--text);min-width:32px;text-align:right;}
+
+  input[type=range]{
+    flex:1;
+    accent-color:var(--accent);
+    height:4px;
+  }
+  input[type=color]{
+    -webkit-appearance:none;
+    width:34px;height:28px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:none;
+    padding:0;
+    cursor:pointer;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper{padding:2px;}
+  input[type=color]::-webkit-color-swatch{border-radius:4px;border:none;}
+
+  input[type=text]{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:14px;
+    width:100%;
+  }
+  input[type=text]:focus{outline:none;border-color:var(--accent);}
+
+  .emojiQuick{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .emojiQuick button{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:7px;
+    font-size:16px;
+    padding:4px 7px;
+  }
+  .emojiQuick button:hover{border-color:var(--accent);}
+  .emojiQuick button.active{border-color:var(--accent);background:#241c3f;}
+
+  /* layers */
+  #layersList{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    max-height:260px;
+    overflow-y:auto;
+  }
+  .layerRow{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:6px 8px;
+    font-size:12px;
+  }
+  .layerRow.selected{border-color:var(--accent);background:#1d1733;}
+  .layerRow .lGlyph{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+  .layerRow .lLabel{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);cursor:default;}
+  .layerRow .lBtns{display:flex;gap:2px;flex-shrink:0;}
+  .layerRow button{
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    font-size:13px;
+    padding:3px 5px;
+    border-radius:5px;
+  }
+  .layerRow button:hover{background:#2a2f3b;color:var(--text);}
+  .layerRow button.off{opacity:.35;}
+  #layersEmpty{color:var(--muted);font-size:12px;padding:10px 2px;}
+
+  .sidebarFooter{
+    margin-top:auto;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    padding-top:12px;
+    border-top:1px solid var(--border);
+  }
+
+  /* ---------- Canvas area ---------- */
+  #canvasWrap{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      linear-gradient(45deg, #15161b 25%, transparent 25%),
+      linear-gradient(-45deg, #15161b 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #15161b 75%),
+      linear-gradient(-45deg, transparent 75%, #15161b 75%);
+    background-size:24px 24px;
+    background-position:0 0,0 12px,12px -12px,-12px 0;
+    background-color:#0b0c10;
+    position:relative;
+    overflow:auto;
+    padding:24px;
+  }
+  #canvas{
+    max-width:100%;
+    max-height:100%;
+    box-shadow:0 10px 40px rgba(0,0,0,.5);
+    cursor:crosshair;
+    background:#000;
+    border-radius:2px;
+  }
+
+  .hint{
+    position:absolute;
+    bottom:14px;
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(15,17,23,.9);
+    border:1px solid var(--border);
+    padding:6px 14px;
+    border-radius:20px;
+    font-size:12px;
+    color:var(--muted);
+    pointer-events:none;
+    white-space:nowrap;
+  }
+
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:#2c313d;border-radius:5px;}
+  ::-webkit-scrollbar-thumb:hover{background:#3a4150;}
+
+  @media (max-width:760px){
+    #editor{flex-direction:column;}
+    #sidebar{width:100%;height:220px;border-right:none;border-bottom:1px solid var(--border);}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1><span class="dot">▦</span> PixelBlur</h1>
+    <div class="sub">Drag to blank, pixelate, or emoji-block parts of an image</div>
+  </div>
+  <div class="headerActions">
+    <button class="btn" id="newImageBtn" hidden>🖼 New image</button>
+  </div>
+</header>
+
+<div id="dropzone">
+  <div class="inner" id="dropInner">
+    <div class="icon">📤</div>
+    <h2>Upload an image</h2>
+    <p>Drag &amp; drop a file here, click to browse, or paste from your clipboard.</p>
+    <button class="btn primary" id="browseBtn">Choose image</button>
+    <input type="file" id="fileInput" accept="image/*" hidden>
+  </div>
+</div>
+
+<div id="editor" hidden>
+  <aside id="sidebar">
+
+    <div class="section">
+      <h3>Tool</h3>
+      <div class="toolGrid">
+        <button class="toolBtn active" data-tool="blank">
+          <span class="glyph">▬</span>Blank
+        </button>
+        <button class="toolBtn" data-tool="pixelate">
+          <span class="glyph">▦</span>Pixelate
+        </button>
+        <button class="toolBtn" data-tool="emoji">
+          <span class="glyph">😊</span>Emote
+        </button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Shape</h3>
+      <div class="segmented" id="shapeSeg">
+        <button data-shape="rect" class="active">▭ Rectangle</button>
+        <button data-shape="ellipse">◯ Ellipse</button>
+      </div>
+    </div>
+
+    <div class="section" id="opts-blank">
+      <h3>Blank options</h3>
+      <div class="row">
+        <label>Color</label>
+        <input type="color" id="blankColor" value="#0b0b0f">
+      </div>
+      <div class="row">
+        <label>Opacity</label>
+        <input type="range" id="blankOpacity" min="10" max="100" value="100">
+        <span class="value" id="blankOpacityVal">100%</span>
+      </div>
+    </div>
+
+    <div class="section" id="opts-pixelate" style="display:none;">
+      <h3>Pixelate options</h3>
+      <div class="row">
+        <label>Block size</label>
+        <input type="range" id="pixelSize" min="4" max="60" value="16">
+        <span class="value" id="pixelSizeVal">16px</span>
+      </div>
+    </div>
+
+    <div class="section" id="opts-emoji" style="display:none;">
+      <h3>Emote options</h3>
+      <input type="text" id="emojiInput" maxlength="4" value="🙈">
+      <div class="emojiQuick" id="emojiQuick"></div>
+      <div class="row">
+        <label>Tile size</label>
+        <input type="range" id="emojiSize" min="16" max="90" value="36">
+        <span class="value" id="emojiSizeVal">36px</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Layers (<span id="layerCount">0</span>)</h3>
+      <div id="layersList"></div>
+      <div id="layersEmpty">Drag on the image to add your first redaction layer.</div>
+    </div>
+
+    <div class="sidebarFooter">
+      <div class="row" style="gap:8px;">
+        <button class="btn small" id="undoBtn" style="flex:1;">↶ Undo</button>
+        <button class="btn small danger" id="clearBtn" style="flex:1;">🗑 Clear all</button>
+      </div>
+      <button class="btn primary" id="downloadBtn">⬇ Download PNG</button>
+    </div>
+
+  </aside>
+
+  <main id="canvasWrap">
+    <canvas id="canvas"></canvas>
+    <div class="hint">Drag on the image to apply the selected tool</div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- State ----------
+  const state = {
+    img: null,
+    layers: [],           // {id,type,shape,x,y,w,h,color,opacity,blockSize,emoji,cellSize,visible}
+    selectedId: null,
+    tool: "blank",
+    shape: "rect",
+    nextId: 1,
+    drafting: false,
+    draftStart: null,
+    draftRect: null,
+  };
+
+  const toolSettings = {
+    blank:    { color: "#0b0b0f", opacity: 1 },
+    pixelate: { blockSize: 16 },
+    emoji:    { emoji: "🙈", cellSize: 36 },
+  };
+
+  // ---------- Elements ----------
+  const dropzone = document.getElementById("dropzone");
+  const dropInner = document.getElementById("dropInner");
+  const fileInput = document.getElementById("fileInput");
+  const browseBtn = document.getElementById("browseBtn");
+  const editor = document.getElementById("editor");
+  const newImageBtn = document.getElementById("newImageBtn");
+
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  const toolBtns = document.querySelectorAll(".toolBtn");
+  const shapeSeg = document.getElementById("shapeSeg");
+
+  const optsBlank = document.getElementById("opts-blank");
+  const optsPixelate = document.getElementById("opts-pixelate");
+  const optsEmoji = document.getElementById("opts-emoji");
+
+  const blankColor = document.getElementById("blankColor");
+  const blankOpacity = document.getElementById("blankOpacity");
+  const blankOpacityVal = document.getElementById("blankOpacityVal");
+
+  const pixelSize = document.getElementById("pixelSize");
+  const pixelSizeVal = document.getElementById("pixelSizeVal");
+
+  const emojiInput = document.getElementById("emojiInput");
+  const emojiQuick = document.getElementById("emojiQuick");
+  const emojiSize = document.getElementById("emojiSize");
+  const emojiSizeVal = document.getElementById("emojiSizeVal");
+
+  const layersList = document.getElementById("layersList");
+  const layersEmpty = document.getElementById("layersEmpty");
+  const layerCount = document.getElementById("layerCount");
+
+  const undoBtn = document.getElementById("undoBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
+
+  const QUICK_EMOJI = ["🙈","😂","🤫","❌","🔒","⭐","💥","🚫","🕶️","👻"];
+  QUICK_EMOJI.forEach(e=>{
+    const b = document.createElement("button");
+    b.textContent = e;
+    b.type = "button";
+    if(e === emojiInput.value) b.classList.add("active");
+    b.addEventListener("click", ()=>{
+      emojiInput.value = e;
+      toolSettings.emoji.emoji = e;
+      [...emojiQuick.children].forEach(c=>c.classList.remove("active"));
+      b.classList.add("active");
+    });
+    emojiQuick.appendChild(b);
+  });
+
+  // ---------- Image loading ----------
+  function loadFile(file){
+    if(!file || !file.type.startsWith("image/")) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=>{
+      state.img = img;
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      state.layers = [];
+      state.selectedId = null;
+      dropzone.hidden = true;
+      editor.hidden = false;
+      newImageBtn.hidden = false;
+      renderAll();
+      renderLayersPanel();
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }
+
+  browseBtn.addEventListener("click", ()=>fileInput.click());
+  fileInput.addEventListener("change", e=>{
+    if(e.target.files[0]) loadFile(e.target.files[0]);
+  });
+
+  ["dragenter","dragover"].forEach(ev=>{
+    dropInner.addEventListener(ev, e=>{
+      e.preventDefault();
+      dropInner.classList.add("dragover");
+    });
+  });
+  ["dragleave","drop"].forEach(ev=>{
+    dropInner.addEventListener(ev, e=>{
+      e.preventDefault();
+      dropInner.classList.remove("dragover");
+    });
+  });
+  dropInner.addEventListener("drop", e=>{
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(file) loadFile(file);
+  });
+
+  document.addEventListener("paste", e=>{
+    const items = e.clipboardData && e.clipboardData.items;
+    if(!items) return;
+    for(const item of items){
+      if(item.type.startsWith("image/")){
+        loadFile(item.getAsFile());
+        break;
+      }
+    }
+  });
+
+  newImageBtn.addEventListener("click", ()=>{
+    if(state.layers.length && !confirm("Start over with a new image? Current edits will be lost.")) return;
+    state.img = null;
+    state.layers = [];
+    state.selectedId = null;
+    editor.hidden = true;
+    newImageBtn.hidden = true;
+    dropzone.hidden = false;
+    fileInput.value = "";
+  });
+
+  // ---------- Tool / option wiring ----------
+  toolBtns.forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      toolBtns.forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      state.tool = btn.dataset.tool;
+      optsBlank.style.display = state.tool === "blank" ? "flex" : "none";
+      optsPixelate.style.display = state.tool === "pixelate" ? "flex" : "none";
+      optsEmoji.style.display = state.tool === "emoji" ? "flex" : "none";
+    });
+  });
+
+  shapeSeg.querySelectorAll("button").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      shapeSeg.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      state.shape = btn.dataset.shape;
+    });
+  });
+
+  blankColor.addEventListener("input", ()=> toolSettings.blank.color = blankColor.value);
+  blankOpacity.addEventListener("input", ()=>{
+    toolSettings.blank.opacity = blankOpacity.value / 100;
+    blankOpacityVal.textContent = blankOpacity.value + "%";
+  });
+  pixelSize.addEventListener("input", ()=>{
+    toolSettings.pixelate.blockSize = parseInt(pixelSize.value, 10);
+    pixelSizeVal.textContent = pixelSize.value + "px";
+  });
+  emojiInput.addEventListener("input", ()=>{
+    toolSettings.emoji.emoji = emojiInput.value || "🙈";
+  });
+  emojiSize.addEventListener("input", ()=>{
+    toolSettings.emoji.cellSize = parseInt(emojiSize.value, 10);
+    emojiSizeVal.textContent = emojiSize.value + "px";
+  });
+
+  // ---------- Drawing effects ----------
+  function clipShape(c, shape, x, y, w, h){
+    c.beginPath();
+    if(shape === "ellipse"){
+      c.ellipse(x + w/2, y + h/2, Math.abs(w/2), Math.abs(h/2), 0, 0, Math.PI*2);
+    } else {
+      c.rect(x, y, w, h);
+    }
+    c.clip();
+  }
+
+  function applyBlank(c, layer){
+    c.save();
+    clipShape(c, layer.shape, layer.x, layer.y, layer.w, layer.h);
+    c.globalAlpha = layer.opacity;
+    c.fillStyle = layer.color;
+    c.fillRect(layer.x, layer.y, layer.w, layer.h);
+    c.restore();
+  }
+
+  function applyPixelate(c, layer){
+    const {x,y,w,h,blockSize} = layer;
+    const ix = Math.max(0, Math.floor(x));
+    const iy = Math.max(0, Math.floor(y));
+    const iw = Math.min(canvas.width - ix, Math.ceil(w));
+    const ih = Math.min(canvas.height - iy, Math.ceil(h));
+    if(iw <= 0 || ih <= 0) return;
+
+    let imgData;
+    try{ imgData = c.getImageData(ix, iy, iw, ih); }
+    catch(e){ return; }
+    const data = imgData.data;
+
+    c.save();
+    clipShape(c, layer.shape, x, y, w, h);
+    for(let by=0; by<ih; by+=blockSize){
+      const bh = Math.min(blockSize, ih - by);
+      for(let bx=0; bx<iw; bx+=blockSize){
+        const bw = Math.min(blockSize, iw - bx);
+        let r=0,g=0,b=0,count=0;
+        for(let py=0; py<bh; py++){
+          for(let px=0; px<bw; px++){
+            const idx = ((by+py)*iw + (bx+px))*4;
+            r += data[idx]; g += data[idx+1]; b += data[idx+2];
+            count++;
+          }
+        }
+        r = Math.round(r/count); g = Math.round(g/count); b = Math.round(b/count);
+        c.fillStyle = `rgb(${r},${g},${b})`;
+        c.fillRect(ix+bx, iy+by, bw, bh);
+      }
+    }
+    c.restore();
+  }
+
+  function applyEmoji(c, layer){
+    const {x,y,w,h,emoji,cellSize} = layer;
+    c.save();
+    clipShape(c, layer.shape, x, y, w, h);
+    c.fillStyle = "#0b0b0f";
+    c.fillRect(x, y, w, h);
+    c.font = `${Math.round(cellSize*0.8)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    for(let ey = cellSize/2; ey < h; ey += cellSize){
+      for(let ex = cellSize/2; ex < w; ex += cellSize){
+        c.fillText(emoji, x+ex, y+ey);
+      }
+    }
+    c.restore();
+  }
+
+  function applyLayer(c, layer){
+    if(layer.type === "blank") applyBlank(c, layer);
+    else if(layer.type === "pixelate") applyPixelate(c, layer);
+    else if(layer.type === "emoji") applyEmoji(c, layer);
+  }
+
+  function renderAll(){
+    if(!state.img) return;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(state.img, 0, 0, canvas.width, canvas.height);
+    for(const layer of state.layers){
+      if(layer.visible) applyLayer(ctx, layer);
+    }
+    if(state.selectedId != null){
+      const sel = state.layers.find(l=>l.id === state.selectedId);
+      if(sel){
+        ctx.save();
+        ctx.strokeStyle = "#7c5cff";
+        ctx.lineWidth = Math.max(2, canvas.width/400);
+        ctx.setLineDash([8,6]);
+        if(sel.shape === "ellipse"){
+          ctx.beginPath();
+          ctx.ellipse(sel.x+sel.w/2, sel.y+sel.h/2, Math.abs(sel.w/2), Math.abs(sel.h/2), 0, 0, Math.PI*2);
+          ctx.stroke();
+        } else {
+          ctx.strokeRect(sel.x, sel.y, sel.w, sel.h);
+        }
+        ctx.restore();
+      }
+    }
+    if(state.draftRect){
+      const r = state.draftRect;
+      ctx.save();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = Math.max(1.5, canvas.width/500);
+      ctx.setLineDash([6,5]);
+      if(state.shape === "ellipse"){
+        ctx.beginPath();
+        ctx.ellipse(r.x+r.w/2, r.y+r.h/2, Math.abs(r.w/2), Math.abs(r.h/2), 0, 0, Math.PI*2);
+        ctx.stroke();
+      } else {
+        ctx.strokeRect(r.x, r.y, r.w, r.h);
+      }
+      ctx.restore();
+    }
+  }
+
+  // ---------- Pointer interaction ----------
+  function canvasCoords(e){
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  }
+
+  function normRect(a, b){
+    return {
+      x: Math.min(a.x, b.x),
+      y: Math.min(a.y, b.y),
+      w: Math.abs(b.x - a.x),
+      h: Math.abs(b.y - a.y),
+    };
+  }
+
+  canvas.addEventListener("pointerdown", e=>{
+    if(!state.img) return;
+    canvas.setPointerCapture(e.pointerId);
+    state.drafting = true;
+    state.draftStart = canvasCoords(e);
+    state.draftRect = null;
+    state.selectedId = null;
+  });
+
+  canvas.addEventListener("pointermove", e=>{
+    if(!state.drafting) return;
+    const cur = canvasCoords(e);
+    state.draftRect = normRect(state.draftStart, cur);
+    renderAll();
+  });
+
+  function commitDraft(){
+    if(!state.drafting) return;
+    state.drafting = false;
+    const r = state.draftRect;
+    state.draftRect = null;
+    if(!r || r.w < 4 || r.h < 4){ renderAll(); return; }
+
+    const id = state.nextId++;
+    const type = state.tool;
+    const base = { id, type, shape: state.shape, x:r.x, y:r.y, w:r.w, h:r.h, visible:true };
+
+    if(type === "blank"){
+      base.color = toolSettings.blank.color;
+      base.opacity = toolSettings.blank.opacity;
+    } else if(type === "pixelate"){
+      base.blockSize = toolSettings.pixelate.blockSize;
+    } else if(type === "emoji"){
+      base.emoji = toolSettings.emoji.emoji;
+      base.cellSize = toolSettings.emoji.cellSize;
+    }
+
+    state.layers.push(base);
+    state.selectedId = id;
+    renderAll();
+    renderLayersPanel();
+  }
+
+  canvas.addEventListener("pointerup", commitDraft);
+  canvas.addEventListener("pointercancel", commitDraft);
+
+  window.addEventListener("keydown", e=>{
+    if((e.key === "Delete" || e.key === "Backspace") && state.selectedId != null && document.activeElement.tagName !== "INPUT"){
+      e.preventDefault();
+      removeLayer(state.selectedId);
+    }
+  });
+
+  // ---------- Layers panel ----------
+  const TYPE_GLYPH = { blank:"▬", pixelate:"▦", emoji:"😊" };
+  const TYPE_LABEL = { blank:"Blank", pixelate:"Pixelate", emoji:"Emote" };
+
+  function renderLayersPanel(){
+    layersList.innerHTML = "";
+    layerCount.textContent = state.layers.length;
+    layersEmpty.style.display = state.layers.length ? "none" : "block";
+
+    // show topmost (last drawn) layer first in the list
+    for(let i = state.layers.length - 1; i >= 0; i--){
+      const layer = state.layers[i];
+      const row = document.createElement("div");
+      row.className = "layerRow" + (layer.id === state.selectedId ? " selected" : "");
+
+      const glyph = document.createElement("span");
+      glyph.className = "lGlyph";
+      glyph.textContent = layer.type === "emoji" ? layer.emoji : TYPE_GLYPH[layer.type];
+
+      const label = document.createElement("span");
+      label.className = "lLabel";
+      label.textContent = `${TYPE_LABEL[layer.type]} · ${layer.shape === "ellipse" ? "ellipse" : "rect"}`;
+
+      const btns = document.createElement("div");
+      btns.className = "lBtns";
+
+      const visBtn = document.createElement("button");
+      visBtn.textContent = layer.visible ? "👁" : "🚫";
+      visBtn.title = "Toggle visibility";
+      if(!layer.visible) visBtn.classList.add("off");
+      visBtn.addEventListener("click", ev=>{
+        ev.stopPropagation();
+        layer.visible = !layer.visible;
+        renderAll();
+        renderLayersPanel();
+      });
+
+      const upBtn = document.createElement("button");
+      upBtn.textContent = "↑";
+      upBtn.title = "Move up (forward)";
+      upBtn.addEventListener("click", ev=>{
+        ev.stopPropagation();
+        moveLayer(layer.id, 1);
+      });
+
+      const downBtn = document.createElement("button");
+      downBtn.textContent = "↓";
+      downBtn.title = "Move down (backward)";
+      downBtn.addEventListener("click", ev=>{
+        ev.stopPropagation();
+        moveLayer(layer.id, -1);
+      });
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "✕";
+      delBtn.title = "Delete layer";
+      delBtn.addEventListener("click", ev=>{
+        ev.stopPropagation();
+        removeLayer(layer.id);
+      });
+
+      btns.append(visBtn, upBtn, downBtn, delBtn);
+      row.append(glyph, label, btns);
+      row.addEventListener("click", ()=>{
+        state.selectedId = (state.selectedId === layer.id) ? null : layer.id;
+        renderAll();
+        renderLayersPanel();
+      });
+      layersList.appendChild(row);
+    }
+  }
+
+  function moveLayer(id, dir){
+    const i = state.layers.findIndex(l=>l.id === id);
+    const j = i + dir;
+    if(i < 0 || j < 0 || j >= state.layers.length) return;
+    [state.layers[i], state.layers[j]] = [state.layers[j], state.layers[i]];
+    renderAll();
+    renderLayersPanel();
+  }
+
+  function removeLayer(id){
+    state.layers = state.layers.filter(l=>l.id !== id);
+    if(state.selectedId === id) state.selectedId = null;
+    renderAll();
+    renderLayersPanel();
+  }
+
+  undoBtn.addEventListener("click", ()=>{
+    if(!state.layers.length) return;
+    const last = state.layers[state.layers.length - 1];
+    removeLayer(last.id);
+  });
+
+  clearBtn.addEventListener("click", ()=>{
+    if(!state.layers.length) return;
+    if(!confirm("Remove all redaction layers?")) return;
+    state.layers = [];
+    state.selectedId = null;
+    renderAll();
+    renderLayersPanel();
+  });
+
+  // ---------- Export ----------
+  downloadBtn.addEventListener("click", ()=>{
+    if(!state.img) return;
+    const out = document.createElement("canvas");
+    out.width = canvas.width;
+    out.height = canvas.height;
+    const octx = out.getContext("2d");
+    octx.drawImage(state.img, 0, 0, out.width, out.height);
+    for(const layer of state.layers){
+      if(layer.visible) applyLayer(octx, layer);
+    }
+    out.toBlob(blob=>{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const ts = new Date().toISOString().replace(/[:.]/g,"-");
+      a.href = url;
+      a.download = `pixelblur-${ts}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  });
+
+})();
+</script>
+</body>
+</html>
