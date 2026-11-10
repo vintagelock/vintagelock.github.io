@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiny LLM Lab</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: #181b26; --ink: #e6e8f0; --muted: #9aa1b5; --line: #2a2f42;
+    --accent: #8f6bff; --accent-soft: #272046; --good: #12a150; --warn: #e8590c;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, "Segoe UI", sans-serif; }
+  header { background: linear-gradient(135deg, #6d4aff, #c04cfd); color: #fff; padding: 28px 20px 22px; }
+  header .in, main { max-width: 1120px; margin: 0 auto; }
+  header h1 { margin: 0 0 4px; font-size: 30px; }
+  header p { margin: 0; opacity: .92; max-width: 760px; }
+  .chips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .chip { background: rgba(255,255,255,.18); border-radius: 999px; padding: 5px 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  main { padding: 18px 16px 60px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin: 18px 0; }
+  section > h2 { margin: 0 0 2px; font-size: 21px; }
+  .sub { color: var(--muted); margin: 0 0 14px; }
+  .row { display: flex; gap: 18px; flex-wrap: wrap; }
+  .col { flex: 1 1 340px; min-width: 0; }
+  button, select { font: inherit; color: var(--ink); border-radius: 10px; border: 1px solid var(--line); background: #232738; padding: 7px 14px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { filter: brightness(1.08); }
+  textarea, input[type=text] { width: 100%; font: 15px/1.4 ui-monospace, Consolas, monospace; border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; background: #11141d; color: var(--ink); }
+  textarea { resize: vertical; }
+  label { font-weight: 600; font-size: 14px; }
+  .ctl { display: flex; align-items: center; gap: 10px; margin: 8px 0; flex-wrap: wrap; }
+  .ctl input[type=range] { flex: 1 1 140px; accent-color: var(--accent); }
+  .val { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 54px; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+
+  /* pipeline */
+  .pipe { display: flex; align-items: stretch; gap: 6px; flex-wrap: wrap; }
+  .box { flex: 1 1 150px; border: 2px solid var(--c); border-radius: 12px; padding: 10px 12px; cursor: help; background: var(--card); transition: transform .1s, box-shadow .1s; }
+  .box:hover, .box.on { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.1); }
+  .box b { color: var(--c); display: block; }
+  .box small { color: var(--muted); }
+  .box .n { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .arrow { align-self: center; color: var(--muted); font-size: 22px; }
+  #detail { margin-top: 12px; background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; min-height: 76px; }
+
+  /* training */
+  canvas { display: block; max-width: 100%; }
+  #lossCv { width: 100%; height: 190px; border: 1px solid var(--line); border-radius: 10px; }
+  .live { background: #14161f; color: #b8f7c8; border-radius: 10px; padding: 12px 14px; font: 16px/1.5 ui-monospace, Consolas, monospace; min-height: 84px; white-space: pre-wrap; word-break: break-word; }
+  .stat { display: inline-block; margin-right: 18px; color: var(--muted); }
+  .stat b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* tokens */
+  .tok { display: inline-flex; flex-direction: column; align-items: center; margin: 0 3px 6px 0; }
+  .tok .ch { width: 34px; height: 38px; display: grid; place-items: center; border-radius: 8px; background: var(--accent-soft); font: 700 19px ui-monospace, Consolas, monospace; border: 1px solid #4a3f87; }
+  .tok.old .ch { opacity: .35; }
+  .tok i { font-style: normal; font-size: 11px; color: var(--muted); }
+  .tok i.id { color: var(--accent); }
+  .bar { display: flex; align-items: center; gap: 10px; margin: 5px 0; cursor: pointer; border-radius: 8px; padding: 2px 4px; }
+  .bar:hover { background: var(--accent-soft); }
+  .bar .ch { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--accent); color: #fff; font: 700 16px ui-monospace, Consolas, monospace; }
+  .bar .track { flex: 1; background: #262a3b; border-radius: 6px; height: 20px; overflow: hidden; }
+  .bar .fill { height: 100%; background: linear-gradient(90deg, #8f6bff, #c04cfd); transition: width .15s; }
+  .bar .pct { width: 52px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .figs { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption { font-size: 13px; color: var(--muted); margin-top: 4px; max-width: 320px; }
+  figcaption b { color: var(--ink); }
+  .wgrid { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+  #tip { position: fixed; pointer-events: none; background: #05060a; border: 1px solid #3a4060; color: #fff; padding: 4px 9px; border-radius: 6px; font: 12px ui-monospace, Consolas, monospace; display: none; z-index: 10; }
+  ul.try li { margin: 6px 0; }
+  .note { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header><div class="in">
+  <h1>🧠 Tiny LLM Lab</h1>
+  <p>A real (but very small) language model that runs entirely in your browser. It learns to predict the <b>next letter</b> — that's the same trick ChatGPT uses, just with ~4,000 numbers instead of hundreds of billions.</p>
+  <div class="chips">
+    <span class="chip">Brain size: <span id="hParams">–</span> numbers</span>
+    <span class="chip">Practice steps: <span id="hStep">0</span></span>
+    <span class="chip">Mistakes score: <span id="hLoss">–</span></span>
+  </div>
+</div></header>
+
+<main>
+
+<section>
+  <h2>1 · What's inside the brain?</h2>
+  <p class="sub">Hover over each part. Every number in every box is a dial the computer can turn — turning them well is called <b>training</b>.</p>
+  <div class="pipe" id="pipe"></div>
+  <div id="detail">Hover over a box above to learn what it does.</div>
+</section>
+
+<section>
+  <h2>2 · Teach it</h2>
+  <p class="sub">Give it some text to read. It plays "guess the next letter" thousands of times and tweaks its dials a little after every wrong guess.</p>
+  <div class="row">
+    <div class="col">
+      <div class="ctl"><label for="preset">Reading material</label>
+        <select id="preset"></select>
+        <span class="note" id="corpusInfo"></span></div>
+      <textarea id="corpus" rows="6" spellcheck="false"></textarea>
+      <p class="note">Only letters a–z, spaces and full stops are kept. Try typing your own!</p>
+      <div class="btns">
+        <button class="primary" id="trainBtn">▶ Start training</button>
+        <button id="resetBtn">↺ New empty brain</button>
+        <button id="saveBtn">💾 Save</button>
+        <button id="loadBtn">📂 Load</button>
+      </div>
+      <div class="ctl"><label for="lr">Learning speed</label>
+        <input type="range" id="lr" min="-3.5" max="-1.3" step="0.05" value="-2"><span class="val" id="lrVal"></span></div>
+      <p class="note">Too slow = takes forever. Too fast = it overshoots and gets confused. Try both!</p>
+    </div>
+    <div class="col">
+      <div><span class="stat">Steps <b id="sStep">0</b></span><span class="stat">Mistakes score <b id="sLoss">–</b></span><span class="stat">Random guessing = <b>3.33</b></span></div>
+      <canvas id="lossCv"></canvas>
+      <p class="note">The line should fall. Lower = better guesses. (Score = how surprised the brain is by the real next letter.)</p>
+      <label>What it writes right now:</label>
+      <div class="live" id="live"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>3 · Talk to it</h2>
+  <p class="sub">Type the start of a sentence. The brain only ever does one thing: say how likely each letter is to come next. Click a letter to add it!</p>
+  <div class="row">
+    <div class="col">
+      <label for="prompt">Start of text</label>
+      <input type="text" id="prompt" value="the " spellcheck="false" autocomplete="off">
+      <div style="margin-top:10px" id="tokens"></div>
+      <div class="ctl"><label for="temp">Creativity</label>
+        <input type="range" id="temp" min="0.1" max="2" step="0.05" value="0.8"><span class="val" id="tempVal"></span></div>
+      <div class="btns">
+        <button class="primary" id="writeBtn">✍ Write 40 more letters</button>
+        <button id="oneBtn">Pick 1 letter for me</button>
+      </div>
+      <p class="note">Low creativity = always picks the favourite. High = takes more risks (and makes more typos).</p>
+    </div>
+    <div class="col">
+      <label>Most likely next letters</label>
+      <div id="bars"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>4 · Rate its writing (feedback)</h2>
+  <p class="sub">Training on text is like studying a textbook. This is like having a <b>teacher</b>: it writes something, you say 👍 or 👎, and it nudges its dials to write more (or less) like that. Chat assistants get polished this way — it's called <b>learning from human feedback</b>.</p>
+  <div class="row">
+    <div class="col">
+      <div class="btns"><button class="primary" id="sampleBtn">✍ Make a sample</button></div>
+      <div class="live" id="fbSample">Press “Make a sample”. It continues the start text from section 3.</div>
+      <div class="btns"><button id="upBtn" disabled>👍 Good!</button><button id="downBtn" disabled>👎 Bad</button>
+        <span class="stat" style="align-self:center">👍 <b id="nUp">0</b> &nbsp; 👎 <b id="nDown">0</b></span></div>
+      <div class="ctl"><label for="fb">Feedback strength</label>
+        <input type="range" id="fb" min="0.02" max="1" step="0.02" value="0.1"><span class="val" id="fbVal"></span></div>
+      <div id="fbMsg" class="note" style="min-height:42px"></div>
+    </div>
+    <div class="col">
+      <label>Or let a robot teacher rate for you</label>
+      <p class="note">The robot is a spelling checker. It makes the brain write, then marks every word: 👍 for real words (from the reading material), 👎 for typos — over and over, with nobody clicking. Train a little first (about 100–300 steps), then switch it on and watch “real words” climb.</p>
+      <div class="btns"><button class="primary" id="autoBtn">🤖 Start robot teacher</button></div>
+      <div><span class="stat">Samples rated <b id="aN">0</b></span><span class="stat">Real words <b id="aPct">–</b></span></div>
+      <div class="live" id="robotLive" style="min-height:48px"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>5 · Where is it looking?</h2>
+  <p class="sub"><b>Attention</b> lets each letter peek back at the letters before it. Each row is a letter asking "which earlier letters matter to me?" — brighter purple = paying more attention. The black corner is the future, which it isn't allowed to see. Hover for numbers.</p>
+  <div class="figs">
+    <figure><canvas id="attn0"></canvas><figcaption><b>Head 1</b> — one way of looking</figcaption></figure>
+    <figure><canvas id="attn1"></canvas><figcaption><b>Head 2</b> — a different way of looking. Heads learn to specialise.</figcaption></figure>
+  </div>
+  <h3 style="margin:22px 0 4px">Thoughts as colours</h3>
+  <p class="sub">Each letter becomes a row of 16 numbers (blue = negative, orange = positive). Watch how they change as the letter travels through the brain.</p>
+  <div class="figs">
+    <figure><canvas id="act0"></canvas><figcaption><b>① Embedded</b><br>letter + position</figcaption></figure>
+    <figure><canvas id="act1"></canvas><figcaption><b>② After attention</b><br>mixed with earlier letters</figcaption></figure>
+    <figure><canvas id="act2"></canvas><figcaption><b>③ After thinking</b><br>ready to predict</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>6 · Every dial, as a picture</h2>
+  <p class="sub">All of the brain's numbers, drawn as coloured squares. Before training they're random noise. Start training and watch them organise themselves. Hover for values.</p>
+  <div class="wgrid" id="wgrid"></div>
+  <h3 style="margin:22px 0 4px">Small dials</h3>
+  <div class="wgrid" id="wsmall"></div>
+</section>
+
+<section>
+  <h2>Things to try</h2>
+  <ul class="try">
+    <li>Ask it to write <b>before</b> training. Then train 500 steps. Then 3,000. Watch gibberish turn into words.</li>
+    <li>Pick the <b>Counting</b> reading material and prompt <code>three four </code>. Does it know what comes next?</li>
+    <li>Pick <b>Random robot</b>. The score can't get near 0 — why? (Because the text itself is random; nobody can guess it!)</li>
+    <li>Type a word it has never seen into the prompt. What does it guess?</li>
+    <li>Put a super high learning speed on. What happens to the score line?</li>
+    <li>It can only see the last 16 letters. Write a long prompt — which letters does it ignore?</li>
+    <li>Make your own reading material with just a few sentences. It will memorise them!</li>
+    <li>Make samples and give 👎 to the typo ones, 👍 to the good ones. Does the next sample get better?</li>
+    <li>Train only ~150 steps (typos everywhere), then start the robot teacher. Watch “real words” climb with no new reading!</li>
+    <li>Let the robot run for a minute, then make a sample. Every word is real… but is it good writing? The brain found a trick: repeating one safe word ("is is is is"). The robot only checks spelling, so that's a perfect score! This is called <b>reward hacking</b> — a real problem for AI makers.</li>
+    <li>Turn the feedback strength up high on the robot. Too strong and it forgets how to write — the same as too-fast learning speed.</li>
+  </ul>
+</section>
+
+</main>
+<div id="tip"></div>
+
+<script src="llm.js"></script>
+<script>
+const { Model, CFG, CHARS, encode, decode, mulberry32 } = TinyLLM;
+const $ = id => document.getElementById(id);
+const T = CFG.T, V = CFG.V, B = 8;
+
+// ---------------- reading material ----------------
+function run(rand, items, sep, min, max, n) {
+  let out = '';
+  for (let i = 0; i < n; i++) {
+    let s = Math.floor(rand() * items.length), len = min + Math.floor(rand() * (max - min + 1));
+    const parts = [];
+    for (let k = 0; k < len && s + k < items.length; k++) parts.push(items[s + k]);
+    out += parts.join(sep) + '. ';
+  }
+  return out;
+}
+const PRESETS = {
+  pets: { label: 'Pets', prompt: 'the ', make() {
+    const r = mulberry32(7), subj = ['the cat', 'the dog', 'the bird', 'a cat', 'a dog', 'a bird'];
+    const pred = ['sat on the mat', 'can run', 'is big', 'is small', 'likes to nap', 'ate the fish', 'can jump'];
+    let s = ''; for (let i = 0; i < 300; i++) s += subj[Math.floor(r() * subj.length)] + ' ' + pred[Math.floor(r() * pred.length)] + '. ';
+    return s; } },
+  count: { label: 'Counting', prompt: 'three four ', make() {
+    return run(mulberry32(3), 'one two three four five six seven eight nine ten'.split(' '), ' ', 3, 10, 120); } },
+  alpha: { label: 'Alphabet', prompt: 'abc', make() {
+    return run(mulberry32(5), 'abcdefghijklmnopqrstuvwxyz'.split(''), '', 4, 12, 150); } },
+  robot: { label: 'Random robot', prompt: 'beep ', make() {
+    const r = mulberry32(9), w = ['beep', 'boop', 'bop']; let s = '';
+    for (let i = 0; i < 160; i++) { const n = 2 + Math.floor(r() * 4); const a = []; for (let k = 0; k < n; k++) a.push(w[Math.floor(r() * 3)]); s += a.join(' ') + '. '; }
+    return s; } },
+  custom: { label: 'My own text', prompt: 'hello ', make() { return 'hello world. hello there. hello friend. '.repeat(20); } },
+};
+
+// ---------------- state ----------------
+let model = new Model(1);
+let corpus = [];
+let training = false, step = 0, hist = [], ema = null, lr = 0.01;
+
+function setCorpus(text) {
+  let ids = encode(text);
+  if (!ids.length) ids = [CHARS.indexOf(' ')];
+  while (ids.length < T + 2) ids = ids.concat(ids);
+  corpus = ids;
+  $('corpusInfo').textContent = corpus.length.toLocaleString() + ' letters';
+}
+
+// ---------------- pipeline ----------------
+const GROUPS = [
+  { name: 'Letters → numbers', color: '#868e96', t: [], sub: '28 symbols: a–z, space, full stop',
+    text: 'Computers can\'t read letters, only numbers. So every symbol gets an ID: <b>a=0, b=1 … z=25, space=26, full stop=27</b>. Real LLMs do the same with chunks of words called "tokens". This step has no dials — it\'s just a lookup list.' },
+  { name: 'Embedding', color: '#1c7ed6', t: ['tok', 'pos'], sub: '16 numbers per letter + 16 per position',
+    text: 'Each letter gets its own list of <b>16 numbers</b> — a kind of personality card. The brain learns these so that similar letters (like vowels) end up with similar cards. A second card says <b>where</b> in the sentence the letter is, because "cat" and "tac" have the same letters.' },
+  { name: 'Attention (2 heads)', color: '#7048e8', t: ['ln1g', 'ln1b', 'wq', 'wk', 'wv', 'wo'], sub: 'Q, K, V and Output grids',
+    text: 'Each letter asks a <b>Question</b> ("what do I need to know?") and every earlier letter holds up a <b>Key</b> ("here\'s what I am"). When they match, that letter passes its <b>Value</b> across. This is how "the" can influence what comes 5 letters later. This is the invention that made modern AI work! Two heads = two different ways of looking at once.' },
+  { name: 'Thinking (MLP)', color: '#e8590c', t: ['ln2g', 'ln2b', 'w1', 'b1', 'w2', 'b2'], sub: '16 → 64 → 16 numbers',
+    text: 'After gathering information from earlier letters, each letter gets some private thinking time: its 16 numbers expand to <b>64</b>, negative ones are zeroed out (that\'s the "ReLU" switch), then squash back to 16. This is where most facts and patterns get stored — it\'s the biggest chunk of the brain.' },
+  { name: 'Output', color: '#12a150', t: ['lnfg', 'lnfb'], sub: 'reuses the embedding cards',
+    text: 'The final 16 numbers are compared with <b>every letter\'s personality card</b>. The closer the match, the higher that letter\'s score. Scores are squashed into percentages that add to 100%. Then we pick one — and repeat, one letter at a time. That\'s all "generating text" is!' },
+];
+function buildPipe() {
+  const total = model.paramCount();
+  $('hParams').textContent = total.toLocaleString();
+  const pipe = $('pipe'); pipe.innerHTML = '';
+  GROUPS.forEach((g, i) => {
+    const n = g.t.reduce((s, k) => s + model.p[k].data.length, 0);
+    const d = document.createElement('div');
+    d.className = 'box'; d.style.setProperty('--c', g.color);
+    d.innerHTML = `<b>${g.name}</b><span class="n">${n ? n.toLocaleString() : '0'}</span> <small>dials</small><br><small>${g.sub}</small>`;
+    const on = () => { $('detail').innerHTML = `<b>${g.name}.</b> ` + g.text; document.querySelectorAll('.box').forEach(b => b.classList.remove('on')); d.classList.add('on'); };
+    d.onmouseenter = on; d.onclick = on;
+    pipe.appendChild(d);
+    if (i < GROUPS.length - 1) { const a = document.createElement('span'); a.className = 'arrow'; a.textContent = '→'; pipe.appendChild(a); }
+  });
+}
+
+// ---------------- heatmaps ----------------
+const DPR = Math.max(1, window.devicePixelRatio || 1);
+const disp = c => c === ' ' ? '_' : c;
+function lerp(a, b, t) { return a + (b - a) * t; }
+function divColor(v) { // blue - white - orange
+  const t = Math.max(-1, Math.min(1, v)), a = Math.abs(t);
+  const [r, g, b] = t >= 0 ? [255, 140, 50] : [70, 150, 255];
+  return `rgb(${lerp(24, r, a) | 0},${lerp(27, g, a) | 0},${lerp(38, b, a) | 0})`;
+}
+function seqColor(v) {
+  const a = Math.max(0, Math.min(1, v));
+  return `rgb(${lerp(24, 175, a) | 0},${lerp(27, 130, a) | 0},${lerp(38, 255, a) | 0})`;
+}
+// opts: cell, rowLabels[], colLabels[], seq (0..1 colours), mask(r,c)->bool, name, max
+function drawMatrix(cv, data, rows, cols, o = {}) {
+  const cell = o.cell || 10, lw = o.rowLabels ? 18 : 0, th = o.colLabels ? 16 : 0;
+  const W = lw + cols * cell, H = th + rows * cell;
+  cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  const ctx = cv.getContext('2d'); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  let mx = o.max || 1e-6;
+  if (!o.max && !o.seq) for (let i = 0; i < data.length; i++) mx = Math.max(mx, Math.abs(data[i]));
+  ctx.font = `${Math.min(12, cell + 1)}px ui-monospace, Consolas, monospace`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const x = lw + c * cell, y = th + r * cell;
+    if (o.mask && o.mask(r, c)) { ctx.fillStyle = '#0d0f16'; }
+    else ctx.fillStyle = o.seq ? seqColor(data[r * cols + c]) : divColor(data[r * cols + c] / mx);
+    ctx.fillRect(x, y, cell - (cell > 6 ? 1 : 0), cell - (cell > 6 ? 1 : 0));
+  }
+  ctx.fillStyle = '#a9afc2';
+  if (o.rowLabels) o.rowLabels.forEach((l, r) => ctx.fillText(disp(l), 9, th + r * cell + cell / 2));
+  if (o.colLabels) o.colLabels.forEach((l, c) => ctx.fillText(disp(l), lw + c * cell + cell / 2, 8));
+  cv._m = { data, rows, cols, cell, lw, th, o, mx };
+}
+const tip = $('tip');
+function hookTip(cv) {
+  cv.addEventListener('mousemove', e => {
+    const m = cv._m; if (!m) return;
+    const rc = cv.getBoundingClientRect();
+    const c = Math.floor((e.clientX - rc.left - m.lw) / m.cell), r = Math.floor((e.clientY - rc.top - m.th) / m.cell);
+    if (r < 0 || c < 0 || r >= m.rows || c >= m.cols || (m.o.mask && m.o.mask(r, c))) { tip.style.display = 'none'; return; }
+    const rl = m.o.rowLabels ? `"${disp(m.o.rowLabels[r])}" ` : `row ${r} `, cl = m.o.colLabels ? `→ "${disp(m.o.colLabels[c])}"` : `col ${c}`;
+    tip.textContent = `${m.o.name || ''} ${rl}${cl}: ${m.data[r * m.cols + c].toFixed(3)}`;
+    tip.style.display = 'block'; tip.style.left = e.clientX + 12 + 'px'; tip.style.top = e.clientY + 14 + 'px';
+  });
+  cv.addEventListener('mouseleave', () => tip.style.display = 'none');
+}
+['attn0', 'attn1', 'act0', 'act1', 'act2'].forEach(id => hookTip($(id)));
+
+// weight pictures
+const BIG = [
+  { k: 'tok', title: 'Letter cards', note: 'one row per letter (28), 16 numbers each', cell: 11, rowLabels: true },
+  { k: 'pos', title: 'Position cards', note: 'one row per position (16)', cell: 11 },
+  { k: 'wq', title: 'Attention: Question', note: '16×16', cell: 11 }, { k: 'wk', title: 'Attention: Key', note: '16×16', cell: 11 },
+  { k: 'wv', title: 'Attention: Value', note: '16×16', cell: 11 }, { k: 'wo', title: 'Attention: Output', note: '16×16', cell: 11 },
+  { k: 'w1', title: 'Thinking: expand', note: '16→64', cell: 7 },
+  { k: 'w2', title: 'Thinking: squash', note: '64→16 (drawn sideways)', cell: 7, flip: true },
+];
+const SMALL = ['ln1g', 'ln1b', 'ln2g', 'ln2b', 'lnfg', 'lnfb', 'b1', 'b2'];
+const wcv = {};
+function buildWeights() {
+  const mk = (host, k, title, note) => {
+    const f = document.createElement('figure'), cv = document.createElement('canvas');
+    f.appendChild(cv); const c = document.createElement('figcaption');
+    c.innerHTML = `<b>${title}</b> <span>${note}</span>`; f.appendChild(c); host.appendChild(f); hookTip(cv); wcv[k] = cv;
+  };
+  BIG.forEach(b => mk($('wgrid'), b.k, b.title, b.note));
+  SMALL.forEach(k => mk($('wsmall'), k, k, `${model.p[k].data.length} numbers`));
+}
+function drawWeights() {
+  for (const b of BIG) {
+    const t = model.p[b.k]; let d = t.data, r = t.r, c = t.c;
+    if (b.flip) { const f = new Float32Array(d.length); for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) f[j * r + i] = d[i * c + j]; d = f; [r, c] = [c, r]; }
+    drawMatrix(wcv[b.k], d, r, c, { cell: b.cell, rowLabels: b.rowLabels ? CHARS.split('') : null, name: b.k });
+  }
+  for (const k of SMALL) { const t = model.p[k]; drawMatrix(wcv[k], t.data, 1, t.data.length, { cell: t.data.length > 20 ? 7 : 11, name: k, max: k.endsWith('g') ? 2 : undefined }); }
+}
+
+// ---------------- loss chart ----------------
+function drawLoss() {
+  const cv = $('lossCv'), W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  const ctx = cv.getContext('2d'); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  const pad = 30, ymax = 3.6, X = i => pad + (i / Math.max(1, hist.length - 1)) * (W - pad - 8), Y = v => H - 18 - (v / ymax) * (H - 28);
+  ctx.strokeStyle = '#2a2f42'; ctx.fillStyle = '#9aa0ae'; ctx.font = '11px system-ui'; ctx.lineWidth = 1;
+  for (let v = 0; v <= 3; v++) { ctx.beginPath(); ctx.moveTo(pad, Y(v)); ctx.lineTo(W - 8, Y(v)); ctx.stroke(); ctx.fillText(v, 10, Y(v) + 4); }
+  ctx.setLineDash([5, 4]); ctx.strokeStyle = '#e8590c'; ctx.beginPath(); ctx.moveTo(pad, Y(3.33)); ctx.lineTo(W - 8, Y(3.33)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#e8590c'; ctx.fillText('random guessing', pad + 6, Y(3.33) - 5);
+  if (hist.length < 2) { ctx.fillStyle = '#9aa0ae'; ctx.fillText('press Start training…', W / 2 - 50, H / 2); return; }
+  const buckets = Math.min(hist.length, W - pad), per = hist.length / buckets;
+  ctx.strokeStyle = '#a58bff'; ctx.lineWidth = 2; ctx.beginPath();
+  for (let b = 0; b < buckets; b++) {
+    let s = 0, n = 0; for (let i = Math.floor(b * per); i < Math.floor((b + 1) * per) && i < hist.length; i++) { s += hist[i]; n++; }
+    const v = n ? s / n : 0, x = pad + (b / Math.max(1, buckets - 1)) * (W - pad - 8);
+    b ? ctx.lineTo(x, Y(v)) : ctx.moveTo(x, Y(v));
+  }
+  ctx.stroke();
+}
+
+// ---------------- talk to it ----------------
+function getTemp() { return +$('temp').value; }
+function renderAsk() {
+  const ids = encode($('prompt').value), win = ids.slice(-T), off = ids.length - win.length;
+  $('tokens').innerHTML = ids.length ? ids.map((id, i) =>
+    `<span class="tok ${i < off ? 'old' : ''}"><span class="ch">${disp(CHARS[id])}</span><i class="id">#${id}</i><i>pos ${i < off ? '–' : i - off}</i></span>`).join('')
+    : '<span class="note">Type something above…</span>';
+  if (off > 0) $('tokens').innerHTML += `<div class="note">The brain can only see the last ${T} letters — the faded ones are forgotten.</div>`;
+  if (!win.length) { $('bars').innerHTML = '<span class="note">Waiting for some letters.</span>'; return; }
+  const { probs, run } = model.nextProbs(win, getTemp());
+  const order = [...probs.keys()].sort((a, b) => probs[b] - probs[a]).slice(0, 8);
+  $('bars').innerHTML = order.map(j => `<div class="bar" data-c="${j}"><span class="ch">${disp(CHARS[j])}</span><span class="track"><span class="fill" style="display:block;width:${(probs[j] * 100).toFixed(1)}%"></span></span><span class="pct">${(probs[j] * 100).toFixed(1)}%</span></div>`).join('');
+  document.querySelectorAll('.bar').forEach(el => el.onclick = () => { $('prompt').value += CHARS[+el.dataset.c]; renderAsk(); });
+  const n = run.acts.n, labels = win.map(i => CHARS[i]);
+  for (let h = 0; h < CFG.H; h++)
+    drawMatrix($('attn' + h), run.acts.att.subarray(h * n * n, (h + 1) * n * n), n, n, { cell: 22, seq: true, rowLabels: labels, colLabels: labels, mask: (r, c) => c > r, name: 'attention' });
+  [['x0', 0], ['x1', 1], ['x2', 2]].forEach(([k, i]) => drawMatrix($('act' + i), run.acts[k].data, n, CFG.d, { cell: 14, rowLabels: labels, name: 'value' }));
+}
+
+function liveSample() {
+  const ids = encode($('prompt').value || ' ');
+  $('live').textContent = decode(model.generate(ids, 70, getTemp()));
+}
+
+// ---------------- training loop ----------------
+function trainOnce() {
+  const L = corpus.length, batch = [];
+  for (let b = 0; b < B; b++) { const s = Math.floor(Math.random() * (L - T - 1)); batch.push([corpus.slice(s, s + T), corpus.slice(s + 1, s + T + 1)]); }
+  const loss = model.trainStep(batch, lr);
+  hist.push(loss); step++;
+  ema = ema === null ? loss : ema * 0.97 + loss * 0.03;
+}
+let lastViz = 0;
+function frame() {
+  if (!training) return;
+  const t0 = performance.now();
+  while (performance.now() - t0 < 14) trainOnce();
+  updateStats();
+  if (t0 - lastViz > 300) { lastViz = t0; refreshViz(); }
+  requestAnimationFrame(frame);
+}
+function updateStats() {
+  $('hStep').textContent = $('sStep').textContent = step.toLocaleString();
+  $('hLoss').textContent = $('sLoss').textContent = ema === null ? '–' : ema.toFixed(2);
+}
+function refreshViz() { drawLoss(); drawWeights(); renderAsk(); liveSample(); }
+
+function setTraining(on) {
+  training = on;
+  $('trainBtn').textContent = on ? '⏸ Pause' : '▶ Start training';
+  if (on) requestAnimationFrame(frame); else refreshViz();
+}
+
+// ---------------- wiring ----------------
+$('trainBtn').onclick = () => setTraining(!training);
+$('resetBtn').onclick = () => { setTraining(false); model.reset((Math.random() * 1e9) | 0); hist = []; step = 0; ema = null; updateStats(); refreshViz(); };
+$('saveBtn').onclick = () => { try { localStorage.setItem('tinyllm-brain', JSON.stringify({ step, p: model.toJSON() })); $('saveBtn').textContent = '✓ Saved'; setTimeout(() => $('saveBtn').textContent = '💾 Save', 1200); } catch (e) { alert('Could not save: ' + e.message); } };
+$('loadBtn').onclick = () => {
+  try {
+    const s = JSON.parse(localStorage.getItem('tinyllm-brain') || 'null');
+    if (!s) return alert('Nothing saved yet.');
+    model.loadJSON(s.p); step = s.step || 0; hist = []; ema = null; updateStats(); refreshViz();
+  } catch (e) { alert('Could not load: ' + e.message); }
+};
+$('lr').oninput = () => { lr = Math.pow(10, +$('lr').value); $('lrVal').textContent = lr.toFixed(4); };
+$('temp').oninput = () => { $('tempVal').textContent = getTemp().toFixed(2); renderAsk(); if (!training) liveSample(); };
+$('prompt').oninput = () => { renderAsk(); if (!training) liveSample(); };
+$('corpus').oninput = () => { setCorpus($('corpus').value); };
+$('preset').onchange = () => {
+  const p = PRESETS[$('preset').value];
+  $('corpus').value = p.make(); setCorpus($('corpus').value); $('prompt').value = p.prompt; renderAsk(); liveSample();
+};
+$('writeBtn').onclick = () => { const ids = model.generate(encode($('prompt').value), 40, getTemp()); $('prompt').value = decode(ids); renderAsk(); };
+$('oneBtn').onclick = () => { const ids = encode($('prompt').value); const { probs } = model.nextProbs(ids.length ? ids : [26], getTemp()); $('prompt').value += CHARS[model.sampleFrom(probs)]; renderAsk(); };
+window.addEventListener('resize', drawLoss);
+
+// ---------------- feedback ----------------
+let fbSample = null, nUp = 0, nDown = 0;
+const fbLr = () => +$('fb').value;
+$('fb').oninput = () => { $('fbVal').textContent = fbLr().toFixed(2); };
+function showSample(el, s) {
+  el.innerHTML = `<span style="opacity:.5">${decode(s.ids.slice(0, s.start))}</span>${decode(s.ids.slice(s.start))}`;
+}
+function makeSample() {
+  const ids = encode($('prompt').value), base = ids.length ? ids : [CHARS.indexOf(' ')];
+  fbSample = { ids: model.generate(base, 30, getTemp()), start: base.length };
+  showSample($('fbSample'), fbSample);
+  $('upBtn').disabled = $('downBtn').disabled = false;
+  $('fbMsg').textContent = 'Is that good writing?';
+}
+function rate(reward) {
+  if (!fbSample) return;
+  const { ids, start } = fbSample, before = model.meanProb(ids, start);
+  model.feedback(ids, start, reward, fbLr());
+  const after = model.meanProb(ids, start);
+  reward > 0 ? nUp++ : nDown++;
+  $('nUp').textContent = nUp; $('nDown').textContent = nDown;
+  $('fbMsg').innerHTML = `${reward > 0 ? '👍' : '👎'} Average chance it gives these exact letters: <b>${(before * 100).toFixed(1)}%</b> → <b>${(after * 100).toFixed(1)}%</b>. ` +
+    (reward > 0 ? 'It learned to like this a bit more.' : 'It learned to avoid this a bit more.') + ' Make another sample to see the effect.';
+  refreshViz();
+}
+$('sampleBtn').onclick = makeSample;
+$('upBtn').onclick = () => rate(1);
+$('downBtn').onclick = () => rate(-1);
+
+// robot teacher: spelling checker gives a grade from -1 to +1
+let robot = null, robotN = 0, robotEma = null, vocab = new Set();
+// Grades every letter: 👍 (+1) inside a real word, 👎 (-1) inside a typo, 0 for words cut off at the edges.
+function wordRewards(ids) {
+  const s = decode(ids), r = new Float32Array(ids.length);
+  let i = 0, ok = 0, tot = 0;
+  while (i < s.length) {
+    if (' .'.includes(s[i])) { i++; continue; }
+    let j = i; while (j < s.length && !' .'.includes(s[j])) j++;
+    if (i > 0 && j < s.length) {
+      const good = vocab.has(s.slice(i, j)); tot++; if (good) ok++;
+      for (let k = i; k < j; k++) r[k] = good ? 1 : -1;
+      if (good) r[j] = 1;
+    }
+    i = j;
+  }
+  return { r, score: tot ? ok / tot : null };
+}
+function robotTick() {
+  const s = Math.floor(Math.random() * (corpus.length - 12)), len = 3 + Math.floor(Math.random() * 6);
+  const base = corpus.slice(s, s + len), ids = model.generate(base, 30, 1); // it practises with its normal voice
+  const { r, score } = wordRewards(ids);
+  if (score === null) return;
+  model.feedback(ids, base.length, r, fbLr());
+  robotN++; robotEma = robotEma === null ? score : robotEma * 0.97 + score * 0.03;
+  $('aN').textContent = robotN.toLocaleString(); $('aPct').textContent = (robotEma * 100).toFixed(0) + '%';
+  showSample($('robotLive'), { ids, start: base.length });
+  const now = performance.now();
+  if (!training && now - lastViz > 300) { lastViz = now; refreshViz(); }
+}
+$('autoBtn').onclick = () => {
+  if (robot) { clearInterval(robot); robot = null; $('autoBtn').textContent = '🤖 Start robot teacher'; return; }
+  vocab = new Set(decode(corpus).split(/[ .]+/).filter(Boolean));
+  robotN = 0; robotEma = null;
+  robot = setInterval(robotTick, 60);
+  $('autoBtn').textContent = '⏸ Stop robot teacher';
+};
+
+// ---------------- start ----------------
+for (const [k, p] of Object.entries(PRESETS)) $('preset').add(new Option(p.label, k));
+$('lr').oninput(); $('temp').oninput(); $('fb').oninput();
+buildPipe(); buildWeights();
+$('corpus').value = PRESETS.pets.make(); setCorpus($('corpus').value); $('prompt').value = PRESETS.pets.prompt;
+updateStats(); refreshViz();
+</script>
+</body>
+</html>
